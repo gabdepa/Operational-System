@@ -11,14 +11,12 @@ int queue_size(queue_t *queue)
     // If the queue pointer is NULL, return 0 (empty queue)
     if ( !queue ) 
         return 0;
-
     // Initialize size of the queue
     int size = 0; 
     // Initialize the current element of the queue by assigning it to the first element (queue->next)
     queue_t *current = queue->next; 
     // Count the first element (increment size by one)
     size++; 
-
     // Iterate through the queue until the current element reaches the first element
     while ( current && current != queue ) 
     {
@@ -90,9 +88,7 @@ int queue_append(queue_t **queue, queue_t *elem)
         // Return with error
         return -3; 
     }
-    
     /****************************** ERROR CASES **********************************************/
-
     // Check if the queue is empty
     if ( !(*queue) ) 
     {
@@ -179,7 +175,6 @@ int queue_remove(queue_t **queue, queue_t *elem)
         return -4; 
     }    
     /****************************** ERROR CASES **********************************************/
-
     // If the queue has only one element
     if ( elem->next == elem ) 
     {
@@ -198,12 +193,11 @@ int queue_remove(queue_t **queue, queue_t *elem)
     // Get the next element in the queue
     queue_t *next_in_queue = elem->next; 
     // Get the previous element in the queue
-    queue_t *prev_in_queue = elem->prev; 
-
+    queue_t *previous_in_queue = elem->prev; 
     // Update the 'next' attribute of the previous element to remove 'elem'
-    prev_in_queue->next = next_in_queue; 
+    previous_in_queue->next = next_in_queue; 
     // Update the 'prev' attribute of the next element to remove 'elem'
-    next_in_queue->prev = prev_in_queue; 
+    next_in_queue->prev = previous_in_queue; 
     // Set the 'next' and 'prev' attributes of the element to NULL, removing it from the queue
     elem->next = elem->prev = NULL; 
     // Return with success

@@ -110,7 +110,7 @@ void task_exit(int exit_code)
 {
 
 #ifdef DEBUG
-printf ("task_exit()=> Task %d being terminated\n", main_task->id);
+printf ("task_exit()=> Task %d being terminated\n", main_task.id);
 #endif
 
     // Switch execution to the Main Task

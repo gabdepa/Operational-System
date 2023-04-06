@@ -1,9 +1,9 @@
 # Flags utilized
-DEBUG_FLAGS = -g
+DEBUG_FLAGS = -g -DDEBUG
 CFLAGS = -std=gnu99 -Wextra
 
 # Declaring calls to clean unused files
-.PHONY : all clean
+.PHONY : all debug clean
 
 # Main tests files
 all : test1 test2 test3
@@ -22,6 +22,10 @@ ppos_core.o : ppos_core.c
 # Compilation rule for queue
 queue.o : queue.c
 	gcc $(CFLAGS) -c $^
+
+# Debug rules
+debug : CFLAGS += $(DEBUG_FLAGS)
+debug : all
 
 # Declaring clean function
 clean :

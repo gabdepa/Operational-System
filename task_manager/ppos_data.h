@@ -9,6 +9,14 @@
 
 #include <ucontext.h>		// biblioteca POSIX de trocas de contexto
 
+// Size of threads stack
+#define STACKSIZE 64 * 1024
+
+// Constants status value
+#define TASK_READY 0
+#define TASK_RUNNING 1
+#define TASK_SUSPENDED 2
+
 // Estrutura que define um Task Control Block (TCB)
 typedef struct task_t
 {

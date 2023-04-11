@@ -7,14 +7,6 @@
 #include "ppos_data.h"
 #include "queue.h"
 
-// Size of threads stack
-#define STACKSIZE 64 * 1024
-
-// Constants status value
-#define TASK_READY 0
-#define TASK_RUNNING 1
-#define TASK_SUSPENDED 2
-
 queue_t *ready_queue = NULL; // Queue of ready tasks
 task_t main_task;     // Main Task
 task_t *current_task; // Current running Task

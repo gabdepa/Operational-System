@@ -94,6 +94,12 @@ void dispatcher_body()
     {
         // Get the next task to be executed using the scheduler function.
         next_task = scheduler();
+        // If the dynamic priority diverges from the static
+        if (next_task->staticPriority != next_task->dynamicPriority)
+        {
+            // Reset the dynamic back to be equal as the static
+            next_task->dynamicPriority = next_task->staticPriority;
+        }
         // Check if a valid next task is found and its status is not TASK_TERMINATED
         if (next_task != NULL)
         {
@@ -114,19 +120,17 @@ void dispatcher_body()
                     debug_print("PPOS: Failed to remove terminated task %d from tasks_queue\n", next_task->id);
                 }
                 break;
-            default:
-                next_task->dynamicPriority = next_task->staticPriority;
-                break;
             }
         }
 #ifdef DEBUG
-        // Print a debug message indicating elements id in the queue of tasks
         queue_print("PPOS: tasks_queue ", (queue_t *)tasks_queue, print_element);
         debug_print("PPOS: user_tasks: %d, next_task_id: %d\n", user_tasks, next_task->id);
 #endif
     }
+     // Set the status of the dispatcher task
+    dispatcher.status = TASK_SUSPENDED;
     // Exit the dispatcher task
-    task_exit(0);
+    task_switch(&main_task);
 }
 
 // This function initializes the PingPongOS. It must be called at the beginning of the main function.
@@ -154,8 +158,6 @@ void ppos_init()
 // Initialize a new Task. Returns <ID> or ERROR CODE
 int task_init(task_t *task, void (*start_func)(void *), void *arg)
 {
-    // Set the initial status for the task
-    task->status = NEW_TASK;
     // Get the current context for the task
     if (getcontext(&(task->context)) == -1)
     {
@@ -173,6 +175,12 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
         // Exit with error code
         exit(1);
     }
+    // Set the initial status for the task
+    task->status = NEW_TASK;
+    // Set the dynamic priority of the task, (default = 0)
+    task->dynamicPriority = 0;
+    // Set the static priority of the task, (default = 0)
+    task->staticPriority = 0;
     // Assign the allocated stack memory to the task's context stack pointer
     task->context.uc_stack.ss_sp = stack;
     // Set the task's context stack size to the pre-defined STACKSIZE constant
@@ -181,19 +189,19 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     task->context.uc_stack.ss_flags = 0;
     // Set the task's context link to 0, which means no specific context to return to after task's completion
     task->context.uc_link = 0;
-    // Configure the task's context to execute 'start_func' with 'arg' when scheduled
-    makecontext(&(task->context), (void (*)(void))start_func, 1, arg);
-    // Update the task's status, ID, and add it to the tasks_queue
+    // Update the task's status
     task->status = TASK_READY;
+    // Update the last_ID
     task->id = ++last_id;
-    // Create priority of the tasks, (default = 0)
-    task->dynamicPriority = 0;
-    task->staticPriority = 0;
+    // Append the task to the queue of tasks
     queue_append((queue_t **)&tasks_queue, (queue_t *)task);
     // Increment the user_tasks counter
     user_tasks++;
-    // Debug message
+    // Configure the task's context to execute 'start_func' with 'arg' when scheduled
+    makecontext(&(task->context), (void (*)(void))start_func, 1, arg);
+#ifdef DEBUG
     debug_print("PPOS: Task created with id %d, currently there are %d user tasks\n", last_id - 1, user_tasks);
+#endif
     // Return the task's ID
     return task->id;
 }
@@ -266,7 +274,7 @@ int task_getprio(task_t *task)
 void task_setprio(task_t *task, int prio)
 {
     // If task "task" is a NULL pointer
-    if (task == NULL)
+    if (!task)
     {
         // Change priority of the current task
         current_task->dynamicPriority = prio;
@@ -294,15 +302,6 @@ void task_exit(int exit_code)
     debug_print("PPOS: Task %d terminated with exit code %d\n", current_task->id, exit_code);
     debug_print("PPOS: Currently there are %d user tasks.\n", user_tasks);
 #endif
-    // If the last task was not the dispatcher
-    if (last_id != dispatcher.id)
-    {
-        // Transfer control to the dispatcher
-        task_switch(&dispatcher);
-    }
-    else // If the last task was the dispatcher
-    {
-        // Transfer control to the main_task
-        task_switch(&main_task);
-    }
+    // Transfer control to the dispatcher
+    task_switch(&dispatcher);
 }

@@ -100,8 +100,8 @@ void dispatcher_body()
             // Reset the dynamic back to be equal as the static
             next_task->dynamicPriority = next_task->staticPriority;
         }
-        // Check if a valid next task is found and its status is not TASK_TERMINATED
-        if (next_task != NULL)
+        // Check if next task status is not TASK_TERMINATED
+        if (next_task->status != TASK_TERMINATED)
         {
             // Perform a context switch to the next task.
             task_switch(next_task);

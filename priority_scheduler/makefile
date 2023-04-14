@@ -16,7 +16,7 @@ pingpong-scheduler: ppos_core.o pingpong-scheduler.o queue.o
 
 # Debug rules
 debug: CFLAGS += $(DEBUG_FLAGS)
-debug: pingpong-dispatcher
+debug: pingpong-scheduler
 
 # Declaring clean function
 clean :

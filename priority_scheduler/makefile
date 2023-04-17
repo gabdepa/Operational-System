@@ -20,7 +20,7 @@ debug: pingpong-scheduler
 
 # Declaring clean function
 clean :
-	$(RM) *.o
+	$(RM) *.o *.log
 # Declaring purge clean function
 purge : clean
 	$(RM) pingpong-scheduler

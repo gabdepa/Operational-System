@@ -1,16 +1,10 @@
-// PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 1.5 -- Março de 2023
-
 // Estruturas de dados internas do sistema operacional
-
 #ifndef __PPOS_DATA__
 #define __PPOS_DATA__
 
 #include <ucontext.h> // biblioteca POSIX de trocas de contexto
 
-// Constants status value
-#define AGING_TASK
+// Status value
 #define TASK_READY 0
 #define TASK_RUNNING 1
 #define TASK_SUSPENDED 2
@@ -25,10 +19,10 @@ typedef struct task_t
 {
   struct task_t *prev, *next; // ponteiros para usar em filas
   int id;                     // identificador da tarefa
+  short status;               // TASK_READY, TASK_RUNNING, TASK_SUSPENDED, ...
+  short int staticPriority;          // static priority of the task
+  short int dynamicPriority;         // dynamic priority of the task
   ucontext_t context;         // contexto armazenado da tarefa
-  short status;               // pronta, rodando, suspensa, ...
-  int staticPriority;          // static priority of the task
-  int dynamicPriority;         // dynamic priority of the task
 } task_t;
 
 // estrutura que define um semáforo

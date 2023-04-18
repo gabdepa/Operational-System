@@ -181,7 +181,7 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     if (getcontext(&(task->context)) == -1)
     {
         // Print error message
-        perror("ERROR: Failed to get context");
+        perror("ERROR: task_init()=> Failed to get context");
         // Exit with error code
         exit(1);
     }
@@ -191,7 +191,7 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     if (stack == NULL)
     {
         // Print error message
-        perror("ERROR: Stack allocation failed");
+        perror("ERROR: task_init()=> Stack allocation failed");
         // Exit with error code
         exit(1);
     }
@@ -247,11 +247,11 @@ void task_yield()
 // Switches execution to the indicated task "task"
 int task_switch(task_t *task)
 {
-    // If the given task is NULL, return an error code (-1)
+    // If the given task is NULL, return an error code (1)
     if (!task)
     {
         // Print error message
-        perror("ERROR: task is a NULL Pointer!\n");
+        perror("ERROR: task_switch()=> task is a NULL Pointer!\n");
         // Exit with error code
         exit(1);
     }
@@ -275,8 +275,10 @@ int task_switch(task_t *task)
     // If the context switch was not successful
     if (result != 0)
     {
-        // Return error code
-        return -1;
+         // Print error message
+        perror("ERROR: task_switch()=> Could not swap context!\n");
+        // Exit with error code
+        exit(1);
     }
     else // Context switch was successfull
     {

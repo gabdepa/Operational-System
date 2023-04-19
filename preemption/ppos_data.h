@@ -19,6 +19,7 @@
 
 // Boolean
 #define TRUE 0
+#define FALSE 1
 
 // Size of threads stack
 #define STACKSIZE 64 * 1024

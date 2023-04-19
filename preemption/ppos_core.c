@@ -177,6 +177,29 @@ void handler(int signum)
     }
 }
 
+void init_timer()
+{
+    tick_action.sa_handler = handler;
+    sigemptyset(&tick_action.sa_mask);
+    tick_action.sa_flags = 0;
+    if (sigaction(SIGALRM, &tick_action, 0) < 0)
+    {
+        perror("ERROR: ppos_init()=> Error on sigaction!\n");
+        exit(1);
+    }
+    // ajustar valores do timer
+    tick_timer.it_value.tv_usec = 1000;
+    tick_timer.it_value.tv_sec = 0;
+    tick_timer.it_interval.tv_usec = 1000;
+    tick_timer.it_interval.tv_sec = 0;
+    // armar timer
+    if (setitimer(ITIMER_REAL, &tick_timer, 0) < 0)
+    {
+        perror("ERROR: ppos_init()=> Error on settimer!\n");
+        exit(1);
+    }
+}
+
 // This function initializes the PingPongOS. It must be called at the beginning of the main function.
 void ppos_init()
 {
@@ -189,7 +212,7 @@ void ppos_init()
     // ID of the main task
     main_task.id = 0;
     // Main task has preemption
-    main_task.preemption = TRUE;
+    main_task.preemption = FALSE;
     // Main task is ready
     main_task.status = TASK_READY;
     // Set the current task to the main task
@@ -198,32 +221,14 @@ void ppos_init()
     getcontext(&(main_task.context));
     // Initialize the dispatcher task.
     task_init(&dispatcher, dispatcher_body, NULL);
-    // Reset the preemption of the dispatcher
-    dispatcher.preemption = TRUE;
+    // Reset the preemption of the dispatcher task
+    dispatcher.preemption = FALSE;
     // Remove the dispatcher task from the tasks_queue because it's not a user task.
     queue_remove((queue_t **)&tasks_queue, (queue_t *)&dispatcher);
 #ifdef DEBUG
     debug_print("PPOS: ppos_init()=> Starting the system. Main task id: %d, number of user tasks: %d.\n", last_id, user_tasks);
 #endif
-
-    tick_action.sa_handler = handler;
-    sigemptyset(&tick_action.sa_mask);
-    tick_action.sa_flags = 0;
-    if (sigaction(SIGALRM, &tick_action, 0) < 0)
-    {
-        perror("ERROR: ppos_init()=> Error on sigaction!\n");
-        exit(1);
-    }
-    tick_timer.it_value.tv_usec = TEMPORIZER;
-    tick_timer.it_value.tv_sec = 0;
-    tick_timer.it_interval.tv_usec = TEMPORIZER;
-    tick_timer.it_interval.tv_sec = 0;
-    // Set the timer
-    if (setitimer(ITIMER_REAL, &tick_timer, 0) < 0)
-    {
-        perror("ERROR: ppos_init()=> Error on settimer!\n");
-        exit(1);
-    }
+    init_timer();
 }
 
 // Initialize a new Task. Returns <ID> of the new stack or ERROR CODE
@@ -257,6 +262,8 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     task->context.uc_link = 0;
     // Update the task's status
     task->status = TASK_READY;
+    // Set the preemption to TRUE
+    task->preemption = TRUE;
     // Set the timer of the task
     task->timer = TASK_TIMER;
     // Update the last_ID

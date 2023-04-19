@@ -1,9 +1,10 @@
-# Preemption
+# Priority Scheduler
+This project goal is to add a scheduler based on priority with aging to my OS.
 
-Until now, my system only supports cooperatives tasks. The goal of this project is to add **time preemption** to the system.
+2 new functions were added:
 
+``` void task_setprio (task_t *task, int prio) ```
+This functions adjusts the static priority of the task "**task**" to the value "**prio**" which must be a number between -20 and +20. In the case "**task**" be NULL, adjusts the priority to the current task.
 
-With that modification, my system will now support preemptive tasks, that can alternate in processor use without the need of context switch tasks explicits through **task_yield**.
-
-Below there is a image explainig what will be done:
-![Schema](https://wiki.inf.ufpr.br/maziero/lib/exe/fetch.php?cache=&media=so:time-sharing.png)
+``` int task_getprio (task_t *task) ```
+This function return static priority value of the task "**task**", or of the current task, in case "**task**" is NULL.

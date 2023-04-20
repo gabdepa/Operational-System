@@ -103,57 +103,8 @@ void dispatcher_body()
 {
     // Set the status of the dispatcher task
     dispatcher.status = TASK_RUNNING;
-    // Create new variable to represent the next task
-    task_t *next_task;
-    // The dispatcher loop continues running until there are no more user tasks.
-    while (tasks_queue != NULL)
-    {
-        // Get the next task to be executed using the scheduler function.
-        next_task = scheduler();
-        // If the dynamic priority diverges from the static
-        if (next_task->staticPriority != next_task->dynamicPriority)
-        {
-            // Reset the dynamic back to be equal as the static
-            next_task->dynamicPriority = next_task->staticPriority;
-        }
-        // Verify if status of the next task is NOT in TASK_TERMINATED
-        if (next_task->status != TASK_TERMINATED)
-        {
-            // Perform a context switch to the next task.
-            task_switch(next_task);
-            // Handle the status of the next task after execution
-            switch (next_task->status)
-            {
-            case TASK_READY:
-                break;
-            case TASK_SUSPENDED:
-                break;
-            case TASK_TERMINATED:
-                // If the task is in the TASK_TERMINATED state, after execution, remove it from the queue.
-                if (queue_remove((queue_t **)&tasks_queue, (queue_t *)next_task) != 0)
-                {
-#ifdef DEBUG
-                    printf("PPOS: dispatcher_body()=> Failed to remove terminated task %d from tasks_queue\n", next_task->id);
-                    queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
-#endif
-                }
-                break;
-            }
-#ifdef DEBUG
-            queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
-#endif
-        }
-#ifdef DEBUG
-        debug_print("PPOS: dispatcher_body()=> user_tasks: %d, next_task_id: %d\n", user_tasks, next_task->id);
-        queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)tasks_queue, print_element);
-#endif
-    }
-    // Set the status of the dispatcher task
-    dispatcher.status = TASK_SUSPENDED;
-    // Return control back to the main task
-    task_switch(&main_task);
     // If there are no more user tasks to execute and the current task running is the dispatcher
-    if ((user_tasks == 0) && (current_task->id == dispatcher.id))
+    if ((user_tasks == 0) && (current_task->id == dispatcher.id) && (main_task.status == TASK_TERMINATED))
     {
         // Update the id of the last task to be the dispatcher id
         last_id = current_task->id;
@@ -165,6 +116,60 @@ void dispatcher_body()
         // Exit with success
         exit(0);
     }
+    else
+    {
+        // Create new variable to represent the next task
+        task_t *next_task;
+        // The dispatcher loop continues running until there are no more user tasks.
+        while (user_tasks > 0)
+        {
+            // Get the next task to be executed using the scheduler function.
+            next_task = scheduler();
+            // If the dynamic priority diverges from the static
+            if (next_task->staticPriority != next_task->dynamicPriority)
+            {
+                // Reset the dynamic back to be equal as the static
+                next_task->dynamicPriority = next_task->staticPriority;
+            }
+            // Verify if status of the next task is NOT in TASK_TERMINATED
+            if (next_task->status != TASK_TERMINATED)
+            {
+                // Reset the task timer to its initial value
+                task_timer = TASK_TIMER;
+                // Perform a context switch to the next task.
+                task_switch(next_task);
+                // Handle the status of the next task after execution
+                switch (next_task->status)
+                {
+                case TASK_READY:
+                    break;
+                case TASK_SUSPENDED:
+                    break;
+                case TASK_TERMINATED:
+                    // If the task is in the TASK_TERMINATED state, after execution, remove it from the queue.
+                    if (queue_remove((queue_t **)&tasks_queue, (queue_t *)next_task) != 0)
+                    {
+#ifdef DEBUG
+                        printf("PPOS: dispatcher_body()=> Failed to remove terminated task %d from tasks_queue\n", next_task->id);
+                        queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
+#endif
+                    }
+                    break;
+                }
+#ifdef DEBUG
+                queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
+#endif
+            }
+#ifdef DEBUG
+            debug_print("PPOS: dispatcher_body()=> user_tasks: %d, next_task_id: %d\n", user_tasks, next_task->id);
+            queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)tasks_queue, print_element);
+#endif
+        }
+        // Set the status of the dispatcher task
+        dispatcher.status = TASK_SUSPENDED;
+        // Return control back to the main task
+        task_switch(&main_task);
+    }
 }
 
 // Define the signal handler function with the signal number as its parameter
@@ -174,10 +179,8 @@ void handler(int signum)
     if (current_task->preemption == TRUE)
     {
         // Check if the task timer has reached zero or below
-        if (task_timer-- <= 0)
+        if (task_timer-- == 0)
         {
-            // Reset the task timer to its initial value
-            task_timer = TASK_TIMER;
 #ifdef DEBUG
             debug_print("PPOS: handler()=> Task %d is preemption compatible. Resetting the task timer.\n", current_task->id);
 #endif

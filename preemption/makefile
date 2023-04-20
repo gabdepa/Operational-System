@@ -22,7 +22,7 @@ pingpong-preemption: ppos_core.o pingpong-preemption.o queue.o
 
 # Debug rules
 debug: CFLAGS += $(DEBUG_FLAGS)
-debug: pingpong-scheduler
+debug: pingpong-preemption pingpong-preemption-stress
 
 # Declaring clean function
 clean :

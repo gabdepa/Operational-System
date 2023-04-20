@@ -30,10 +30,11 @@ task_t dispatcher;    // Dispatcher: This variable represents the dispatcher tas
 
 int last_id;    // Last Task ID: This variable keeps track of the last assigned task ID. It is used to generate unique IDs for new tasks.
 int user_tasks; // Current quantity tasks of the user: This variable maintains a count of the current number of user tasks (excluding system tasks like the dispatcher). It is helpful for managing and monitoring the overall state of the system.
+int task_timer;
 
 // Aditional structs needed to use preemption
-struct sigaction tick_action;
-struct itimerval tick_timer;
+struct sigaction action; // Struct Action used
+struct itimerval timer;  // Struct Timer used
 
 // Function to print the details of a task element
 void print_element(void *ptr)
@@ -77,8 +78,17 @@ task_t *scheduler()
 #ifdef DEBUG
             debug_print("PPOS: scheduler()=> Lowing the dynamic priority of task: %d\n", tmp_task->id);
 #endif
-            // Lower the dynamic priority of the current task
-            tmp_task->dynamicPriority--;
+            // If dynamic priority is at the lowest
+            if (tmp_task->dynamicPriority <= -20)
+            {
+                // Reset to the lowest dynamic priority
+                tmp_task->dynamicPriority = -20;
+            }
+            else // If it's not at the lowest
+            {
+                // Lower the dynamic priority of the current task
+                tmp_task->dynamicPriority--;
+            }
         }
         // Move on to the next task in the queue
         tmp_task = tmp_task->next;
@@ -157,45 +167,73 @@ void dispatcher_body()
     }
 }
 
+// Define the signal handler function with the signal number as its parameter
 void handler(int signum)
 {
+    // Check if the current task has preemption
     if (current_task->preemption == TRUE)
     {
-        current_task->timer--;
-        if (current_task->timer <= 0)
+        // Check if the task timer has reached zero or below
+        if (task_timer-- <= 0)
         {
-            current_task->timer = TASK_TIMER;
+            // Reset the task timer to its initial value
+            task_timer = TASK_TIMER;
+#ifdef DEBUG
+            debug_print("PPOS: handler()=> Task %d is preemption compatible. Resetting the task timer.\n", current_task->id);
+#endif
+            // Yield the current task to another one
             task_yield();
+        }
+        else
+        {
+            // If in debug mode, print a message with the remaining task timer ticks
+#ifdef DEBUG
+            debug_print("PPOS: handler()=> Task %d still has %d ticks..\n", current_task->id, task_timer);
+#endif
+            // Continue executing the current task
+            return;
         }
     }
     else
     {
 #ifdef DEBUG
-        debug_print("PPOS: handler()=> Task %d is not preemption compatible.", current_task->id);
+        debug_print("PPOS: handler()=> Task %d is not preemption compatible.\n", current_task->id);
 #endif
+        // Continue executing the current task
         return;
     }
 }
 
-void init_timer()
+void timer_init()
 {
-    tick_action.sa_handler = handler;
-    sigemptyset(&tick_action.sa_mask);
-    tick_action.sa_flags = 0;
-    if (sigaction(SIGALRM, &tick_action, 0) < 0)
+    // Assign the 'handler' function as the signal handler for the action struct
+    action.sa_handler = handler;
+    // Initialize the action.sa_mask set to be an empty set
+    sigemptyset(&action.sa_mask);
+    // Set the flags of the action struct to 0
+    action.sa_flags = 0;
+    // Set up the signal handler for SIGALRM using the action struct and check if the sigaction call is successful
+    if (sigaction(SIGALRM, &action, 0) < 0)
     {
+        // If the sigaction call fails, print an error message
         perror("ERROR: ppos_init()=> Error on sigaction!\n");
+        // Exit with error code
         exit(1);
     }
-    // ajustar valores do timer
-    tick_timer.it_value.tv_usec = 1000;
-    tick_timer.it_value.tv_sec = 0;
-    tick_timer.it_interval.tv_usec = 1000;
-    tick_timer.it_interval.tv_sec = 0;
-    // armar timer
-    if (setitimer(ITIMER_REAL, &tick_timer, 0) < 0)
+    // Set the initial timer value for the microsecond field
+    timer.it_value.tv_usec = TEMPORIZER;
+    // Set the initial timer value for the second field
+    timer.it_value.tv_sec = 0;
+    // Set the timer interval value for the microsecond field
+    timer.it_interval.tv_usec = TEMPORIZER;
+    // Set the timer interval value for the second field
+    timer.it_interval.tv_sec = 0;
+    // Set the timer using the ITIMER_REAL timer type and the timer struct and check if the setitimer call is successful
+    if (setitimer(ITIMER_REAL, &timer, 0) < 0)
     {
+        // If the setitimer call fails, print an error message
         perror("ERROR: ppos_init()=> Error on settimer!\n");
+        // Exit with error code
         exit(1);
     }
 }
@@ -205,13 +243,13 @@ void ppos_init()
 {
     // Disable buffering for stdout so that printed text appears immediately.
     setbuf(stdout, NULL);
-    // Last Task ID
+    // Initialize Last Task ID
     last_id = 0;
     // Current number of user tasks
     user_tasks = 0;
     // ID of the main task
     main_task.id = 0;
-    // Main task has preemption
+    // Main task dont't have preemption
     main_task.preemption = FALSE;
     // Main task is ready
     main_task.status = TASK_READY;
@@ -228,7 +266,10 @@ void ppos_init()
 #ifdef DEBUG
     debug_print("PPOS: ppos_init()=> Starting the system. Main task id: %d, number of user tasks: %d.\n", last_id, user_tasks);
 #endif
-    init_timer();
+    // Initialize timer
+    timer_init();
+    // Set the task timer to its initial value
+    task_timer = TASK_TIMER;
 }
 
 // Initialize a new Task. Returns <ID> of the new stack or ERROR CODE
@@ -264,8 +305,6 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     task->status = TASK_READY;
     // Set the preemption to TRUE
     task->preemption = TRUE;
-    // Set the timer of the task
-    task->timer = TASK_TIMER;
     // Update the last_ID
     task->id = ++last_id;
     // Set the dynamic and static priority of the task, (default = 0)
@@ -368,13 +407,13 @@ void task_setprio(task_t *task, int prio)
     // If task "task" is a NULL pointer
     if (!task)
     {
-        // Change priority of the current task
+        // Change both prioritys of the current task
         current_task->dynamicPriority = prio;
         current_task->staticPriority = prio;
     }
     else // task is not a NULL Pointer
     {
-        // Change priority of the task
+        // Change both prioritys of the task
         task->staticPriority = prio;
         task->dynamicPriority = prio;
     }

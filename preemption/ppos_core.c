@@ -98,6 +98,19 @@ task_t *scheduler()
     return lowest_priority_task;
 }
 
+// Config auxiliar function
+void task_reset(task_t *task)
+{
+    // Reset the task timer to its initial value
+    task_timer = TASK_TIMER;
+    // If the dynamic priority diverges from the static
+    if (task->staticPriority != task->dynamicPriority)
+    {
+        // Reset the dynamic back to be equal as the static
+        task->dynamicPriority = task->staticPriority;
+    }
+}
+
 // The dispatcher_body function is responsible for managing the execution of user tasks.
 void dispatcher_body()
 {
@@ -125,17 +138,11 @@ void dispatcher_body()
         {
             // Get the next task to be executed using the scheduler function.
             next_task = scheduler();
-            // If the dynamic priority diverges from the static
-            if (next_task->staticPriority != next_task->dynamicPriority)
-            {
-                // Reset the dynamic back to be equal as the static
-                next_task->dynamicPriority = next_task->staticPriority;
-            }
+            // Config the next_task
+            task_reset(next_task);
             // Verify if status of the next task is NOT in TASK_TERMINATED
             if (next_task->status != TASK_TERMINATED)
             {
-                // Reset the task timer to its initial value
-                task_timer = TASK_TIMER;
                 // Perform a context switch to the next task.
                 task_switch(next_task);
                 // Handle the status of the next task after execution
@@ -178,8 +185,9 @@ void handler(int signum)
     // Check if the current task has preemption
     if (current_task->preemption == TRUE)
     {
+        task_timer--;
         // Check if the task timer has reached zero or below
-        if (task_timer-- == 0)
+        if (task_timer == 0)
         {
 #ifdef DEBUG
             debug_print("PPOS: handler()=> Task %d is preemption compatible. Resetting the task timer.\n", current_task->id);

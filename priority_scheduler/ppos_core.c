@@ -71,8 +71,17 @@ task_t *scheduler()
 #ifdef DEBUG
             debug_print("PPOS: scheduler()=> Lowing the dynamic priority of task: %d\n", tmp_task->id);
 #endif
-            // Lower the dynamic priority of the current task
-            tmp_task->dynamicPriority--;
+            // If dynamic priority is at the lowest
+            if (tmp_task->dynamicPriority <= -20)
+            {
+                // Reset to the lowest dynamic priority
+                tmp_task->dynamicPriority = -20;
+            }
+            else // If it's not at the lowest
+            {
+                // Lower the dynamic priority of the current task
+                tmp_task->dynamicPriority--;
+            }
         }
         // Move on to the next task in the queue
         tmp_task = tmp_task->next;
@@ -115,16 +124,6 @@ void dispatcher_body()
                 break;
             case TASK_SUSPENDED:
                 break;
-            case TASK_TERMINATED:
-                // If the task is in the TASK_TERMINATED state, after execution, remove it from the queue.
-                if (queue_remove((queue_t **)&tasks_queue, (queue_t *)next_task) != 0)
-                {
-#ifdef DEBUG
-                    printf("PPOS: dispatcher_body()=> Failed to remove terminated task %d from tasks_queue\n", next_task->id);
-                    queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
-#endif
-                }
-                break;
             }
         }
 #ifdef DEBUG
@@ -141,6 +140,7 @@ void dispatcher_body()
         // Change the status of the currently running task(dispatcher) to TASK_TERMINATED
         current_task->status = TASK_TERMINATED;
 #ifdef DEBUG
+        queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
         debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, last task id was: %d with status %d. Exiting program.\n", user_tasks, last_id, current_task->status);
 #endif
         // Exit with success
@@ -203,19 +203,18 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     task->context.uc_stack.ss_flags = 0;
     // Set the task's context link to 0, which means no specific context to return to after task's completion
     task->context.uc_link = 0;
-    // Set the dynamic priority of the task, (default = 0)
-    task->dynamicPriority = 0;
-    // Set the static priority of the task, (default = 0)
-    task->staticPriority = 0;
+    // Set the dynamic and static priority of the task, (default = 0)
+    task_setprio(task, 0);
     // Update the task's status
     task->status = TASK_READY;
     // Update the last_ID
     task->id = ++last_id;
-    // Append the task to the queue of tasks if it is not the dispatcher
+    // Check if the task it is not the dispatcher
     if (task->id != dispatcher.id)
     {
         // Increment the user_tasks counter
         user_tasks++;
+        // Append the task to the queue of tasks
         queue_append((queue_t **)&tasks_queue, (queue_t *)task);
 #ifdef DEBUG
         debug_print("PPOS: task_init()=> Task created with id %d, currently there are %d user tasks\n", last_id, user_tasks);
@@ -331,10 +330,17 @@ void task_exit(int exit_code)
     current_task->status = TASK_TERMINATED;
     // Update the user tasks count by decrementing it by one
     --user_tasks;
+    if (queue_remove((queue_t **)&tasks_queue, (queue_t *)current_task) != 0)
+    {
+#ifdef DEBUG
+        printf("PPOS: task_exit()=> Failed to remove terminated task %d from tasks_queue\n", current_task->id);
+#endif
+    }
 #ifdef DEBUG
     // Log the task termination for debugging purposes
     debug_print("PPOS: task_exit()=> Task %d terminated with exit code %d\n", current_task->id, exit_code);
     debug_print("PPOS: task_exit()=> Currently there are %d user tasks.\n", user_tasks);
+    queue_print("PPOS: task_exit()()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
 #endif
     // Transfer control to the dispatcher
     task_switch(&dispatcher);

@@ -30,7 +30,7 @@ task_t dispatcher;    // Dispatcher: This variable represents the dispatcher tas
 
 int last_id;    // Last Task ID: This variable keeps track of the last assigned task ID. It is used to generate unique IDs for new tasks.
 int user_tasks; // Current quantity tasks of the user: This variable maintains a count of the current number of user tasks (excluding system tasks like the dispatcher). It is helpful for managing and monitoring the overall state of the system.
-int task_timer;
+int task_timer; // Task Timer: This variable keeps track of the quantum of the task running
 
 // Aditional structs needed to use preemption
 struct sigaction action; // Struct Action used
@@ -98,7 +98,7 @@ task_t *scheduler()
     return lowest_priority_task;
 }
 
-// Config auxiliar function
+// Config auxiliar function that reset some properties of the task
 void task_reset(task_t *task)
 {
     // Reset the task timer to its initial value
@@ -116,66 +116,50 @@ void dispatcher_body()
 {
     // Set the status of the dispatcher task
     dispatcher.status = TASK_RUNNING;
+    // Create new variable to represent the next task
+    task_t *next_task;
+    // The dispatcher loop continues running until there are no more user tasks.
+    while (user_tasks > 0 && tasks_queue != NULL)
+    {
+        // Get the next task to be executed using the scheduler function.
+        next_task = scheduler();
+        // Config the next_task
+        task_reset(next_task);
+        // Verify if status of the next task is NOT in TASK_TERMINATED
+        if (next_task->status != TASK_TERMINATED)
+        {
+#ifdef DEBUG
+            debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, next task id: %d\n", user_tasks, next_task->id);
+#endif
+            // Perform a context switch to the next task.
+            task_switch(next_task);
+            // Handle the status of the next task after execution
+            switch (next_task->status)
+            {
+            case TASK_READY:
+                break;
+            case TASK_SUSPENDED:
+                break;
+            }
+        }
+#ifdef DEBUG
+        queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)tasks_queue, print_element);
+#endif
+    }
+    // Set the status of the dispatcher task
+    dispatcher.status = TASK_SUSPENDED;
     // If there are no more user tasks to execute and the current task running is the dispatcher
-    if ((user_tasks == 0) && (current_task->id == dispatcher.id) && (main_task.status == TASK_TERMINATED))
+    if ((user_tasks == 0) && (current_task->id == dispatcher.id))
     {
         // Update the id of the last task to be the dispatcher id
         last_id = current_task->id;
         // Change the status of the currently running task(dispatcher) to TASK_TERMINATED
         current_task->status = TASK_TERMINATED;
 #ifdef DEBUG
-        debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, last task id was: %d. Exiting program.\n", user_tasks, last_id);
+        debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, last task id was: %d with status %d. Exiting program.\n", user_tasks, last_id, current_task->status);
 #endif
         // Exit with success
         exit(0);
-    }
-    else
-    {
-        // Create new variable to represent the next task
-        task_t *next_task;
-        // The dispatcher loop continues running until there are no more user tasks.
-        while (user_tasks > 0)
-        {
-            // Get the next task to be executed using the scheduler function.
-            next_task = scheduler();
-            // Config the next_task
-            task_reset(next_task);
-            // Verify if status of the next task is NOT in TASK_TERMINATED
-            if (next_task->status != TASK_TERMINATED)
-            {
-                // Perform a context switch to the next task.
-                task_switch(next_task);
-                // Handle the status of the next task after execution
-                switch (next_task->status)
-                {
-                case TASK_READY:
-                    break;
-                case TASK_SUSPENDED:
-                    break;
-                case TASK_TERMINATED:
-                    // If the task is in the TASK_TERMINATED state, after execution, remove it from the queue.
-                    if (queue_remove((queue_t **)&tasks_queue, (queue_t *)next_task) != 0)
-                    {
-#ifdef DEBUG
-                        printf("PPOS: dispatcher_body()=> Failed to remove terminated task %d from tasks_queue\n", next_task->id);
-                        queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
-#endif
-                    }
-                    break;
-                }
-#ifdef DEBUG
-                queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
-#endif
-            }
-#ifdef DEBUG
-            debug_print("PPOS: dispatcher_body()=> user_tasks: %d, next_task_id: %d\n", user_tasks, next_task->id);
-            queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)tasks_queue, print_element);
-#endif
-        }
-        // Set the status of the dispatcher task
-        dispatcher.status = TASK_SUSPENDED;
-        // Return control back to the main task
-        task_switch(&main_task);
     }
 }
 
@@ -190,7 +174,7 @@ void handler(int signum)
         if (task_timer == 0)
         {
 #ifdef DEBUG
-            debug_print("PPOS: handler()=> Task %d is preemption compatible. Resetting the task timer.\n", current_task->id);
+            debug_print("PPOS: handler()=> Task %d has preemption. Resetting the task timer.\n", current_task->id);
 #endif
             // Yield the current task to another one
             task_yield();
@@ -199,7 +183,7 @@ void handler(int signum)
         {
             // If in debug mode, print a message with the remaining task timer ticks
 #ifdef DEBUG
-            debug_print("PPOS: handler()=> Task %d still has %d ticks..\n", current_task->id, task_timer);
+            debug_print("PPOS: handler()=> Task %d still has %d ticks.\n", current_task->id, task_timer);
 #endif
             // Continue executing the current task
             return;
@@ -257,27 +241,27 @@ void ppos_init()
     // Initialize Last Task ID
     last_id = 0;
     // Current number of user tasks
-    user_tasks = 0;
+    user_tasks = 1;
     // ID of the main task
     main_task.id = 0;
-    // Main task dont't have preemption
-    main_task.preemption = FALSE;
     // Main task is ready
     main_task.status = TASK_READY;
+    // Main task has preemption
+    main_task.preemption = TRUE;
     // Set the current task to the main task
     current_task = &main_task;
     // Save the current context into the "context" attribute of the main task.
     getcontext(&(main_task.context));
+    // Append the main task to the queue of tasks
+    queue_append((queue_t **)&tasks_queue, (queue_t *)&main_task);
+#ifdef DEBUG
+    debug_print("PPOS: ppos_init()=> Starting the system. Main task id: %d, number of user tasks: %d.\n", last_id, user_tasks);
+#endif
     // Initialize the dispatcher task.
     task_init(&dispatcher, dispatcher_body, NULL);
     // Reset the preemption of the dispatcher task
     dispatcher.preemption = FALSE;
-    // Remove the dispatcher task from the tasks_queue because it's not a user task.
-    queue_remove((queue_t **)&tasks_queue, (queue_t *)&dispatcher);
-#ifdef DEBUG
-    debug_print("PPOS: ppos_init()=> Starting the system. Main task id: %d, number of user tasks: %d.\n", last_id, user_tasks);
-#endif
-    // Initialize timer
+    // Initialize the timer
     timer_init();
     // Set the task timer to its initial value
     task_timer = TASK_TIMER;
@@ -312,26 +296,28 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     task->context.uc_stack.ss_flags = 0;
     // Set the task's context link to 0, which means no specific context to return to after task's completion
     task->context.uc_link = 0;
-    // Update the task's status
-    task->status = TASK_READY;
-    // Set the preemption to TRUE
-    task->preemption = TRUE;
-    // Update the last_ID
-    task->id = ++last_id;
     // Set the dynamic and static priority of the task, (default = 0)
     task_setprio(task, 0);
-    // Append the task to the queue of tasks
-    queue_append((queue_t **)&tasks_queue, (queue_t *)task);
+    // Update the task's status
+    task->status = TASK_READY;
+    // Update the last_ID
+    task->id = ++last_id;
+    // Set the preemption to TRUE
+    task->preemption = TRUE;
+    // Check if the task it is not the dispatcher
+    if (task->id != dispatcher.id)
+    {
+        // Increment the user_tasks counter
+        user_tasks++;
+        // Append the task to the queue of tasks
+        queue_append((queue_t **)&tasks_queue, (queue_t *)task);
 #ifdef DEBUG
-    queue_print("PPOS: task_init()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
+        debug_print("PPOS: task_init()=> Task created with id %d, currently there are %d user tasks\n", last_id, user_tasks);
+        queue_print("PPOS: task_init()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
 #endif
-    // Increment the user_tasks counter
-    user_tasks++;
+    }
     // Configure the task's context to execute 'start_func' with 'arg' when scheduled
     makecontext(&(task->context), (void (*)(void))start_func, 1, arg);
-#ifdef DEBUG
-    debug_print("PPOS: task_init()=> Task created with id %d, currently there are %d user tasks\n", last_id - 1, user_tasks);
-#endif
     // Return the task's ID
     return task->id;
 }
@@ -439,6 +425,12 @@ void task_exit(int exit_code)
     current_task->status = TASK_TERMINATED;
     // Update the user tasks count by decrementing it by one
     --user_tasks;
+    if (queue_remove((queue_t **)&tasks_queue, (queue_t *)current_task) != 0)
+    {
+#ifdef DEBUG
+        printf("PPOS: task_exit()=> Failed to remove terminated task %d from tasks_queue\n", current_task->id);
+#endif
+    }
 #ifdef DEBUG
     // Log the task termination for debugging purposes
     debug_print("PPOS: task_exit()=> Task %d terminated with exit code %d\n", current_task->id, exit_code);

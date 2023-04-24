@@ -306,6 +306,22 @@ int task_getprio(task_t *task)
 // Adjust the priority of the "task" to the value of "prio"
 void task_setprio(task_t *task, int prio)
 {
+    // Check if the 'prio' value is outside the valid range of -20 to 20
+    if (prio < -20 || prio > 20)
+    {
+        // If 'prio' is less than -20
+        if (prio < -20)
+        {
+            // Set 'prio' to the minimum allowed value (-20)
+            prio = -20;
+        }
+        // If 'prio' is greater than 20
+        else
+        {
+            // Set 'prio' to the maximum allowed value (20)
+            prio = 20;
+        }
+    }
     // If task "task" is a NULL pointer
     if (!task)
     {

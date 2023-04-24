@@ -100,12 +100,15 @@ void dispatcher_body()
             // Reset the dynamic back to be equal as the static
             next_task->dynamicPriority = next_task->staticPriority;
         }
-        // Verify if status of the next task is NOT in TASK_TERMINATED
+        // Verify if the status of the next task is NOT in TASK_TERMINATED
         if (next_task->status != TASK_TERMINATED)
         {
+#ifdef DEBUG
+            debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, next task id: %d\n", user_tasks, next_task->id);
+#endif
             // Perform a context switch to the next task.
             task_switch(next_task);
-            // Handle the status of the next task after execution
+            // Handle the status of the "next task" after execution
             switch (next_task->status)
             {
             case TASK_READY:
@@ -125,14 +128,11 @@ void dispatcher_body()
             }
         }
 #ifdef DEBUG
-        debug_print("PPOS: dispatcher_body()=> user_tasks: %d, next_task_id: %d\n", user_tasks, next_task->id);
         queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)tasks_queue, print_element);
 #endif
     }
     // Set the status of the dispatcher task
     dispatcher.status = TASK_SUSPENDED;
-    // Return control back to the main task
-    task_switch(&main_task);
     // If there are no more user tasks to execute and the current task running is the dispatcher
     if ((user_tasks == 0) && (current_task->id == dispatcher.id))
     {
@@ -141,7 +141,7 @@ void dispatcher_body()
         // Change the status of the currently running task(dispatcher) to TASK_TERMINATED
         current_task->status = TASK_TERMINATED;
 #ifdef DEBUG
-        debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, last task id was: %d. Exiting program.\n", user_tasks, last_id);
+        debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, last task id was: %d with status %d. Exiting program.\n", user_tasks, last_id, current_task->status);
 #endif
         // Exit with success
         exit(0);
@@ -156,7 +156,7 @@ void ppos_init()
     // Last Task ID
     last_id = 0;
     // Current number of user tasks
-    user_tasks = 0;
+    user_tasks = 1;
     // ID of the main task
     main_task.id = 0;
     // Main task is ready
@@ -165,13 +165,13 @@ void ppos_init()
     current_task = &main_task;
     // Save the current context into the "context" attribute of the main task.
     getcontext(&(main_task.context));
-    // Initialize the dispatcher task.
-    task_init(&dispatcher, dispatcher_body, NULL);
-    // Remove the dispatcher task from the tasks_queue because it's not a user task.
-    queue_remove((queue_t **)&tasks_queue, (queue_t *)&dispatcher);
+    // Append the main task to the queue of tasks
+    queue_append((queue_t **)&tasks_queue, (queue_t *)&main_task);
 #ifdef DEBUG
     debug_print("PPOS: ppos_init()=> Starting the system. Main task id: %d, number of user tasks: %d.\n", last_id, user_tasks);
 #endif
+    // Initialize the dispatcher task.
+    task_init(&dispatcher, dispatcher_body, NULL);
 }
 
 // Initialize a new Task. Returns <ID> of the new stack or ERROR CODE
@@ -181,7 +181,7 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     if (getcontext(&(task->context)) == -1)
     {
         // Print error message
-        perror("ERROR: task_init()=> Failed to get context");
+        perror("ERROR: task_init()=> Failed to get context!");
         // Exit with error code
         exit(1);
     }
@@ -191,7 +191,7 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     if (stack == NULL)
     {
         // Print error message
-        perror("ERROR: task_init()=> Stack allocation failed");
+        perror("ERROR: task_init()=> Stack allocation failed!");
         // Exit with error code
         exit(1);
     }
@@ -211,18 +211,19 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     task->status = TASK_READY;
     // Update the last_ID
     task->id = ++last_id;
-    // Append the task to the queue of tasks
-    queue_append((queue_t **)&tasks_queue, (queue_t *)task);
+    // Append the task to the queue of tasks if it is not the dispatcher
+    if (task->id != dispatcher.id)
+    {
+        // Increment the user_tasks counter
+        user_tasks++;
+        queue_append((queue_t **)&tasks_queue, (queue_t *)task);
 #ifdef DEBUG
-    queue_print("PPOS: task_init()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
+        debug_print("PPOS: task_init()=> Task created with id %d, currently there are %d user tasks\n", last_id, user_tasks);
+        queue_print("PPOS: task_init()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
 #endif
-    // Increment the user_tasks counter
-    user_tasks++;
+    }
     // Configure the task's context to execute 'start_func' with 'arg' when scheduled
     makecontext(&(task->context), (void (*)(void))start_func, 1, arg);
-#ifdef DEBUG
-    debug_print("PPOS: task_init()=> Task created with id %d, currently there are %d user tasks\n", last_id - 1, user_tasks);
-#endif
     // Return the task's ID
     return task->id;
 }
@@ -275,7 +276,7 @@ int task_switch(task_t *task)
     // If the context switch was not successful
     if (result != 0)
     {
-         // Print error message
+        // Print error message
         perror("ERROR: task_switch()=> Could not swap context!\n");
         // Exit with error code
         exit(1);
@@ -334,7 +335,6 @@ void task_exit(int exit_code)
     // Log the task termination for debugging purposes
     debug_print("PPOS: task_exit()=> Task %d terminated with exit code %d\n", current_task->id, exit_code);
     debug_print("PPOS: task_exit()=> Currently there are %d user tasks.\n", user_tasks);
-    queue_print("PPOS: task_exit()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
 #endif
     // Transfer control to the dispatcher
     task_switch(&dispatcher);

@@ -158,7 +158,7 @@ void ppos_init()
     // Current number of user tasks
     user_tasks = 1;
     // ID of the main task
-    main_task.id = 0;
+    main_task.id = last_id;
     // Main task is ready
     main_task.status = TASK_READY;
     // Set the current task to the main task
@@ -172,6 +172,9 @@ void ppos_init()
 #endif
     // Initialize the dispatcher task.
     task_init(&dispatcher, dispatcher_body, NULL);
+#ifdef DEBUG
+    debug_print("PPOS: ppos_init()=> Dispatcher task created with id %d, number of user tasks: %d.\n", last_id, user_tasks);
+#endif
 }
 
 // Initialize a new Task. Returns <ID> of the new stack or ERROR CODE

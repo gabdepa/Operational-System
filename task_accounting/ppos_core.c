@@ -274,8 +274,6 @@ void ppos_init()
     main_task.status = TASK_READY;
     // Main task has preemption
     main_task.preemption = TRUE;
-    // Set the start time
-    main_task.beginTime = systime();
     // Set the number of activations
     main_task.activations = 1;
     // Set the processor usage time
@@ -336,8 +334,6 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     task->id = ++last_id;
     // Set the preemption to TRUE
     task->preemption = TRUE;
-    // Set the start time
-    task->beginTime = systime();
     // Set the number of activations
     task->activations = 0;
     // Set the processor usage time

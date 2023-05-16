@@ -145,6 +145,8 @@ void dispatcher_body()
 #endif
             // Perform a context switch to the next task.
             task_switch(next_task);
+            // Add processing time to the execution time
+            next_task->executionTime += next_task->processingTime;
             // Increase the amount of activations of the dispatcher
             dispatcher.activations++;
             // Handle the status of the next task after execution
@@ -339,6 +341,8 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     // Set the number of activations
     task->activations = 0;
     // Set the processor usage time
+    task->processingTime = 0;
+    // Set the execution time
     task->executionTime = 0;
     // Check if the task it is not the dispatcher
     if (task->id != dispatcher.id)

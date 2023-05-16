@@ -38,7 +38,7 @@ typedef struct task_t
   unsigned int beginTime; // Time the Task started
   unsigned int activations; // Number of times the task was activated
   unsigned int executionTime; // Amount of time executing 
-  unsigned processingTime; // Amount of time used the processor
+  unsigned processingTime; // Amount of time using the processor
 } task_t;
 
 // estrutura que define um semáforo

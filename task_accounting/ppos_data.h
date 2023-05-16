@@ -35,6 +35,10 @@ typedef struct task_t
   ucontext_t context;         // contexto armazenado da tarefa
   short int preemption;       // Preemption: True or False
   int timer;             // Timer of the task
+  unsigned int beginTime; // Time the Task started
+  unsigned int activations; // Number of times the task was activated
+  unsigned int executionTime; // Amount of time executing 
+  unsigned processingTime; // Amount of time used the processor
 } task_t;
 
 // estrutura que define um semáforo

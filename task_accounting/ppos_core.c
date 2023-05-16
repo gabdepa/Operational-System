@@ -28,9 +28,10 @@ task_t *current_task; // Current running Task: This pointer points to the task t
 task_t *tasks_queue;  // Queue of tasks: This pointer represents the queue of all tasks, which includes tasks with different states (e.g., TASK_READY, TASK_RUNNING, TASK_TERMINATED).
 task_t dispatcher;    // Dispatcher: This variable represents the dispatcher task, which is responsible for managing tasks execution and switching between them.
 
-int last_id;    // Last Task ID: This variable keeps track of the last assigned task ID. It is used to generate unique IDs for new tasks.
-int user_tasks; // Current quantity tasks of the user: This variable maintains a count of the current number of user tasks (excluding system tasks like the dispatcher). It is helpful for managing and monitoring the overall state of the system.
-int task_timer; // Task Timer: This variable keeps track of the quantum of the task running
+int last_id;              // Last Task ID: This variable keeps track of the last assigned task ID. It is used to generate unique IDs for new tasks.
+int user_tasks;           // Current quantity tasks of the user: This variable maintains a count of the current number of user tasks (excluding system tasks like the dispatcher). It is helpful for managing and monitoring the overall state of the system.
+int task_timer;           // Task Timer: This variable keeps track of the quantum of the task running
+unsigned int system_time; // System Time: Global variable that tells the time the system is running
 
 // Aditional structs needed to use preemption
 struct sigaction action; // Struct Action used
@@ -98,6 +99,12 @@ task_t *scheduler()
     return lowest_priority_task;
 }
 
+// Returns current time of the system
+unsigned int systime()
+{
+    return system_time;
+}
+
 // Config auxiliar function that reset some properties of the task
 void task_reset(task_t *task)
 {
@@ -116,6 +123,8 @@ void dispatcher_body()
 {
     // Set the status of the dispatcher task
     dispatcher.status = TASK_RUNNING;
+    // Increase the amount of activations of the dispatcher
+    dispatcher.activations++;
     // Create new variable to represent the next task
     task_t *next_task;
     // The dispatcher loop continues running until there are no more user tasks.
@@ -123,16 +132,20 @@ void dispatcher_body()
     {
         // Get the next task to be executed using the scheduler function.
         next_task = scheduler();
-        // Config the next_task
+        // Reconfig the next_task
         task_reset(next_task);
         // Verify if status of the next task is NOT in TASK_TERMINATED
         if (next_task->status != TASK_TERMINATED)
         {
+            // Increase the amount of activations of the task
+            next_task->activations++;
 #ifdef DEBUG
             debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, next task id: %d\n", user_tasks, next_task->id);
 #endif
             // Perform a context switch to the next task.
             task_switch(next_task);
+            // Increase the amount of activations of the dispatcher
+            dispatcher.activations++;
             // Handle the status of the next task after execution
             switch (next_task->status)
             {
@@ -155,6 +168,10 @@ void dispatcher_body()
         last_id = current_task->id;
         // Change the status of the currently running task(dispatcher) to TASK_TERMINATED
         current_task->status = TASK_TERMINATED;
+        // Total time of execution. Current time - amount of execution time
+        current_task->executionTime += (systime() - current_task->executionTime);
+        // Print of values
+        printf("Dispatcher Task %d: execution time %dms, processor time %dms, %d activations\n", current_task->id, current_task->executionTime, current_task->processingTime, current_task->activations);
 #ifdef DEBUG
         debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, last task id was: %d with status %d. Exiting program.\n", user_tasks, last_id, current_task->status);
 #endif
@@ -166,6 +183,10 @@ void dispatcher_body()
 // Define the signal handler function with the signal number as its parameter
 void handler(int signum)
 {
+    // Increase amount of time the task is executing in 1ms
+    current_task->processingTime++;
+    // Increase amount of system time in 1ms
+    system_time++;
     // Check if the current task has preemption
     if (current_task->preemption == TRUE)
     {
@@ -236,6 +257,8 @@ void timer_init()
 // This function initializes the PingPongOS. It must be called at the beginning of the main function.
 void ppos_init()
 {
+    // Initialize the clock of the system
+    system_time = 0;
     // Disable buffering for stdout so that printed text appears immediately.
     setbuf(stdout, NULL);
     // Initialize Last Task ID
@@ -248,6 +271,12 @@ void ppos_init()
     main_task.status = TASK_READY;
     // Main task has preemption
     main_task.preemption = TRUE;
+    // Set the start time
+    main_task.beginTime = systime();
+    // Set the number of activations
+    main_task.activations = 1;
+    // Set the processor usage time
+    main_task.executionTime = 0;
     // Set the current task to the main task
     current_task = &main_task;
     // Save the current context into the "context" attribute of the main task.
@@ -304,6 +333,12 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     task->id = ++last_id;
     // Set the preemption to TRUE
     task->preemption = TRUE;
+    // Set the start time
+    task->beginTime = systime();
+    // Set the number of activations
+    task->activations = 0;
+    // Set the processor usage time
+    task->executionTime = 0;
     // Check if the task it is not the dispatcher
     if (task->id != dispatcher.id)
     {
@@ -441,6 +476,11 @@ void task_exit(int exit_code)
     current_task->status = TASK_TERMINATED;
     // Update the user tasks count by decrementing it by one
     --user_tasks;
+    // Total time of execution. Current time - amount of execution time
+    current_task->executionTime += (systime() - current_task->executionTime);
+    // Print of values
+    printf("Task %d exit: execution time %dms, processor time %dms, %d activations\n", current_task->id, current_task->executionTime, current_task->processingTime, current_task->activations);
+    // Remove task from the queue
     if (queue_remove((queue_t **)&tasks_queue, (queue_t *)current_task) != 0)
     {
 #ifdef DEBUG

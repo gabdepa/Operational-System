@@ -6,27 +6,26 @@ CFLAGS = -std=gnu99 -Wextra
 .PHONY : all clean debug
 
 # All tests files
-all : pingpong-preemption pingpong-preemption-stress
+all : pingpong-contab-prio pingpong-contab
+# Debug rules
+debug: CFLAGS += $(DEBUG_FLAGS)
+debug: all
 
 # Compilation rule for the preemption stress file
-pingpong-preemption-stress: ppos_core.o pingpong-preemption-stress.o queue.o
+pingpong-contab-prio: ppos_core.o pingpong-contab-prio.o queue.o
 	gcc -o $@ $^
 
 # Compilation rule for the preemption file
-pingpong-preemption: ppos_core.o pingpong-preemption.o queue.o
+pingpong-contab: ppos_core.o pingpong-contab.o queue.o
 	gcc -o $@ $^
 
 # Pattern rule that matches any .o file and its corresponding .c file.
 %.o: %.c
 	gcc $(CFLAGS) -c $^
 
-# Debug rules
-debug: CFLAGS += $(DEBUG_FLAGS)
-debug: pingpong-preemption pingpong-preemption-stress
-
 # Declaring clean function
 clean :
 	$(RM) *.o *.log
 # Declaring purge clean function
 purge : clean
-	$(RM) pingpong-preemption pingpong-preemption-stress
+	$(RM) pingpong-contab pingpong-contab-prio

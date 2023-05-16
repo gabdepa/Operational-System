@@ -140,7 +140,8 @@ void dispatcher_body()
             // Increase the amount of activations of the task
             next_task->activations++;
 #ifdef DEBUG
-            debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, next task id: %d\n", user_tasks, next_task->id);
+            debug_print("PPOS: dispatcher_body()=> Dispatcher was activated %d times.\n", dispatcher.activations);
+            debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, next task id: %d, %d  activations.\n", user_tasks, next_task->id, next_task->activations);
 #endif
             // Perform a context switch to the next task.
             task_switch(next_task);
@@ -171,7 +172,7 @@ void dispatcher_body()
         // Total time of execution. Current time - amount of execution time
         current_task->executionTime += (systime() - current_task->executionTime);
         // Print of values
-        printf("Dispatcher Task %d: execution time %dms, processor time %dms, %d activations\n", current_task->id, current_task->executionTime, current_task->processingTime, current_task->activations);
+        printf("Dispatcher Task %d: execution time %dms, processor time %dms, %d activations.\n", current_task->id, current_task->executionTime, current_task->processingTime, current_task->activations);
 #ifdef DEBUG
         debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, last task id was: %d with status %d. Exiting program.\n", user_tasks, last_id, current_task->status);
 #endif
@@ -183,9 +184,9 @@ void dispatcher_body()
 // Define the signal handler function with the signal number as its parameter
 void handler(int signum)
 {
-    // Increase amount of time the task is executing in 1ms
+    // Increase task time of execution
     current_task->processingTime++;
-    // Increase amount of system time in 1ms
+    // Increase system time
     system_time++;
     // Check if the current task has preemption
     if (current_task->preemption == TRUE)
@@ -347,7 +348,7 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
         // Append the task to the queue of tasks
         queue_append((queue_t **)&tasks_queue, (queue_t *)task);
 #ifdef DEBUG
-        debug_print("PPOS: task_init()=> Task created with id %d, currently there are %d user tasks\n", last_id, user_tasks);
+        debug_print("PPOS: task_init()=> Task created with id %d, currently there are %d user tasks.\n", last_id, user_tasks);
         queue_print("PPOS: task_init()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
 #endif
     }
@@ -479,7 +480,7 @@ void task_exit(int exit_code)
     // Total time of execution. Current time - amount of execution time
     current_task->executionTime += (systime() - current_task->executionTime);
     // Print of values
-    printf("Task %d exit: execution time %dms, processor time %dms, %d activations\n", current_task->id, current_task->executionTime, current_task->processingTime, current_task->activations);
+    printf("Task %d exit: execution time %dms, processor time %dms, %d activations.\n", current_task->id, current_task->executionTime, current_task->processingTime, current_task->activations);
     // Remove task from the queue
     if (queue_remove((queue_t **)&tasks_queue, (queue_t *)current_task) != 0)
     {
@@ -489,7 +490,7 @@ void task_exit(int exit_code)
     }
 #ifdef DEBUG
     // Log the task termination for debugging purposes
-    debug_print("PPOS: task_exit()=> Task %d terminated with exit code %d\n", current_task->id, exit_code);
+    debug_print("PPOS: task_exit()=> Task %d terminated with exit code %d, with %d activations.\n", current_task->id, exit_code, current_task->activations);
     debug_print("PPOS: task_exit()=> Currently there are %d user tasks.\n", user_tasks);
     queue_print("PPOS: task_exit()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
 #endif

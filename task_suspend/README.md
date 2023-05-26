@@ -1,11 +1,23 @@
-# Operational-System
+# Suspended Tasks
 
-This project was developed for the matter **CI-1215: Operational Systems** of the Teacher: **Carlos Maziero**.
+This project's aim is to construct functions to suspend and awaken tasks in a multi-tasking environment.
 
-This project aims to build, incrementally, a small didactic operating system. The system is built initially as a library of cooperative threads within a real operating system process (Linux, MacOS or other Unix).
+## Main Function
 
-The development is incremental, gradually adding features such as preemption, accounting, semaphores, message queues, and access to a virtual disk. This approach simplifies the development and debugging of the core, in addition to eliminating the use of machine language.
+The primary function to implement is task_wait, which allows a task to suspend itself while awaiting the completion of another task. This is analogous to POSIX's wait and pthread_join calls.
 
-The general structure of the code to be developed is presented in the figure below. The files in blue are fixed (provided by the teacher), while the files in green were developed by me:
-![Schema](https://wiki.inf.ufpr.br/maziero/lib/exe/fetch.php?cache=&media=so:ppos.png)
+Here is the declaration for task_wait:
 
+`int task_wait (task_t *task);`
+
+## Functionality
+
+The call to task_wait(b) causes the current task to be suspended until task b completes. When task b concludes its operation (by invoking the task_exit call), the suspended task should return to the queue of ready tasks.
+
+Note that several tasks may be waiting for task b to finish. All these tasks must be awakened when b ends its operation.
+
+If task b either doesn't exist or has already ended, task_wait should return immediately, without suspending the current task.
+
+## Return Value
+
+The task_wait call should return the termination code of task b (the exit_code value provided as a parameter of task_exit). If the indicated task doesn't exist or if there's another error, the function should return -1.

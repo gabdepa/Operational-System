@@ -1,4 +1,4 @@
-# Task Sleep System Call
+# Task Sleep
 
 In UNIX, the system call `sleep(t)` suspends a process for `t` seconds. In this project, I've successfully created a similar function, `task_sleep`. This function suspends the current task for a specified duration (time in milliseconds), without interrupting the execution of other tasks:
 

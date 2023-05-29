@@ -30,16 +30,16 @@ typedef struct task_t
   struct task_t *prev, *next; // ponteiros para usar em filas
   int id;                     // identificador da tarefa
   short status;               // TASK_READY, TASK_RUNNING, TASK_SUSPENDED, ...
-  short int staticPriority;          // static priority of the task
-  short int dynamicPriority;         // dynamic priority of the task
+  short int staticPriority;   // static priority of the task
+  short int dynamicPriority;  // dynamic priority of the task
   ucontext_t context;         // contexto armazenado da tarefa
   short int preemption;       // Preemption: True or False
-  int timer;             // Timer of the task
-  unsigned int activations; // Number of times the task was activated
-  unsigned int executionTime; // Amount of time executing 
-  unsigned processingTime; // Amount of time using the processor
-  unsigned int sleepingTime; // Amount of time a task has to sleep
-  struct task_t *suspended; // Queue for suspended tasks that are waiting
+  int timer;                  // Timer of the task
+  unsigned int activations;   // Number of times the task was activated
+  unsigned int executionTime; // Amount of time executing
+  unsigned processingTime;    // Amount of time using the processor
+  unsigned int sleepingTime;  // Amount of time the task will sleep
+  struct task_t *suspended;   // Queue for suspended tasks that are waiting
 } task_t;
 
 // estrutura que define um semáforo

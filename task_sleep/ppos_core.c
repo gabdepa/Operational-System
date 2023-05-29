@@ -23,11 +23,11 @@
     } while (0)
 #endif
 
-task_t main_task;              // Main Task: This variable represents the main task of the program.
-task_t *current_task;          // Current running Task: This pointer points to the task that is currently running.
-task_t *tasks_queue;           // Queue of tasks: This pointer represents the queue of all tasks, which includes tasks with different states (e.g., TASK_READY, TASK_RUNNING, TASK_TERMINATED).
-task_t *suspended_tasks_queue; // Queue of Suspended Tasks: This pointer represents the queue of tasks that are in state "TASK_SUSPENDED" and are putting to sleep.
-task_t dispatcher;             // Dispatcher: This variable represents the dispatcher task, which is responsible for managing tasks execution and switching between them.
+task_t main_task;        // Main Task: This variable represents the main task of the program.
+task_t *current_task;    // Current running Task: This pointer points to the task that is currently running.
+task_t *ready_tasks;     // Queue of tasks: This pointer represents the queue of all tasks, which includes tasks with different states (e.g., TASK_READY, TASK_RUNNING, TASK_TERMINATED).
+task_t *suspended_tasks; // Queue of Suspended Tasks: This pointer represents the queue of tasks that are in state "TASK_SUSPENDED" and were put to sleep.
+task_t dispatcher;       // Dispatcher: This variable represents the dispatcher task, which is responsible for managing tasks execution and switching between them.
 
 int last_id;              // Last Task ID: This variable keeps track of the last assigned task ID. It is used to generate unique IDs for new tasks.
 int user_tasks;           // Current quantity tasks of the user: This variable maintains a count of the current number of user tasks (excluding system tasks like the dispatcher). It is helpful for managing and monitoring the overall state of the system.
@@ -53,51 +53,58 @@ void print_element(void *ptr)
 // Determines the next task to be executed
 task_t *scheduler()
 {
-    // Set tmp_task to the next task in the queue
-    task_t *tmp_task = tasks_queue->next;
-    // Set lowest_priority_task to the first task in the queue
-    task_t *lowest_priority_task = tasks_queue;
-    // Set queue_start to the next task in the queue (same as tmp_task initially)
-    task_t *queue_start = tasks_queue->next;
-    // Loop through the tasks queue
-    do
+    if (ready_tasks)
     {
-#ifdef DEBUG
-        debug_print("PPOS: scheduler()=> Current in task: %d of the queue of tasks.\n", tmp_task->id);
-#endif
-        // Check if the current task has a lower dynamic priority than the current lowest_priority_task
-        if (tmp_task->dynamicPriority < lowest_priority_task->dynamicPriority)
+        // Set lowest_priority_task to the first task in the queue
+        task_t *lowest_priority_task = ready_tasks;
+        // Set tmp_task to the next task in the queue
+        task_t *tmp_task = ready_tasks->next;
+        // Set queue_start to the next task in the queue (same as tmp_task initially)
+        task_t *queue_start = ready_tasks->next;
+        // Loop through the tasks queue
+        do
         {
 #ifdef DEBUG
-            debug_print("PPOS: scheduler()=> Found task with the lowest dynamic priority, task: %d\n", tmp_task->id);
+            debug_print("PPOS: scheduler()=> Current in task: %d of the queue of tasks.\n", tmp_task->id);
 #endif
-            // Set the new lowest_priority_task
-            lowest_priority_task = tmp_task;
-        }
-        // Check if the current task is not the lowest priority task
-        if (tmp_task != lowest_priority_task)
-        {
+            // Check if the current task has a lower dynamic priority than the current lowest_priority_task
+            if (tmp_task->dynamicPriority < lowest_priority_task->dynamicPriority)
+            {
 #ifdef DEBUG
-            debug_print("PPOS: scheduler()=> Lowing the dynamic priority of task: %d\n", tmp_task->id);
+                debug_print("PPOS: scheduler()=> Found task with the lowest dynamic priority, task: %d\n", tmp_task->id);
 #endif
-            // If dynamic priority is at the lowest
-            if (tmp_task->dynamicPriority <= -20)
-            {
-                // Reset to the lowest dynamic priority
-                tmp_task->dynamicPriority = -20;
+                // Set the new lowest_priority_task
+                lowest_priority_task = tmp_task;
             }
-            else // If it's not at the lowest
+            // Check if the current task is not the lowest priority task
+            if (tmp_task != lowest_priority_task)
             {
-                // Lower the dynamic priority of the current task
-                tmp_task->dynamicPriority--;
+#ifdef DEBUG
+                debug_print("PPOS: scheduler()=> Lowing the dynamic priority of task: %d\n", tmp_task->id);
+#endif
+                // If dynamic priority is at the lowest
+                if (tmp_task->dynamicPriority <= -20)
+                {
+                    // Reset to the lowest dynamic priority
+                    tmp_task->dynamicPriority = -20;
+                }
+                else // If it's not at the lowest
+                {
+                    // Lower the dynamic priority of the current task
+                    tmp_task->dynamicPriority--;
+                }
             }
-        }
-        // Move on to the next task in the queue
-        tmp_task = tmp_task->next;
-        // Continue looping until we reach the initial starting point in the queue
-    } while (tmp_task != queue_start);
-    // Return the task with the lowest dynamic priority
-    return lowest_priority_task;
+            // Move on to the next task in the queue
+            tmp_task = tmp_task->next;
+            // Continue looping until we reach the initial starting point in the queue
+        } while (tmp_task != queue_start);
+        // Return the task with the lowest dynamic priority
+        return lowest_priority_task;
+    }
+#ifdef DEBUG
+    queue_print("PPOS: scheduler()=> Queue of ready tasks is empty! Queue", (queue_t *)ready_tasks, print_element);
+#endif
+    return NULL;
 }
 
 // Returns current time of the system
@@ -121,31 +128,51 @@ void task_reset(task_t *task)
 
 void task_wakeup()
 {
-    // Queue of suspended tasks is empty
-    if (suspended_tasks_queue == NULL)
+#ifdef DEBUG
+    queue_print("PPOS: task_wakeup()=> Queue of sleeping tasks: ", (queue_t *)suspended_tasks, print_element);
+#endif
+    if (suspended_tasks)
     {
-        return;
-    }
-    // Initialize a pointer to the first suspended task in queue
-    task_t *aux = suspended_tasks_queue;
-    // Save the pointer to the first task as the starting point for the loop
-    task_t *start = aux;
-    // Declare a pointer to store the next task in the queue
-    task_t *next_aux;
-    // Start a loop that will go through each suspended task in queue
-    do
-    {
-        // Store the next task before resuming the current one
-        next_aux = aux->next;
-        if (systime() >= suspended_tasks_queue)
+        // Pointer to the head of suspended tasks queue
+        task_t *start = suspended_tasks;
+        // Pointer used to iterate over each task in the suspended tasks queue
+        task_t *aux = start;
+        // Pointer used to save the next task
+        task_t *next;
+        // Start a loop that will go through each suspended tasks of the queue
+        do
         {
-            // Call the resume function for the current task
-            task_resume(aux, &suspended_tasks_queue);
-        }
-        // Move to the next task in the suspended tasks queue
-        aux = next_aux;
-        // Continue looping as long as the current task is not the head of the queue
-    } while (aux != start);
+#ifdef DEBUG
+            debug_print("PPOS: task_wakeup()=> head of the queue is task %d, current in task %d, next is %d.\n", start->id, aux->id, aux->next->id);
+            queue_print("PPOS: task_wakeup()=> Queue of sleeping tasks: \n", (queue_t *)suspended_tasks, print_element);
+#endif
+            if (systime() >= aux->sleepingTime)
+            {
+                // Save the next task before resuming
+                next = aux->next;
+#ifdef DEBUG
+                debug_print("PPOS: task_wakeup()=> systime(): %d, wake up time of task %d: %d.\n", systime(), aux->id, aux->sleepingTime);
+#endif
+                // Call the resume function for the current waiting task
+                task_resume(aux, &suspended_tasks);
+                // If the queue is empty
+                if (!suspended_tasks)
+                {
+                    break;
+                }
+                // Reset the pointer to the head of suspended task queue
+                start = suspended_tasks;
+                // Move to the next task after potentially altering the queue
+                aux = next;
+            }
+            else
+            {
+                // If didn't resume the task, just move to the next task in the queue
+                aux = aux->next;
+            }
+            // Continue looping as long as the current suspended task is not the one we started with
+        } while (aux != start);
+    }
 }
 
 // The dispatcher_body function is responsible for managing the execution of user tasks.
@@ -153,8 +180,6 @@ void dispatcher_body()
 {
     // Set the status of the dispatcher task
     dispatcher.status = TASK_RUNNING;
-    // Increase the amount of activations of the dispatcher
-    dispatcher.activations++;
     // Create new variable to represent the next task
     task_t *next_task;
     // The dispatcher loop continues running until there are no more user tasks.
@@ -162,23 +187,23 @@ void dispatcher_body()
     {
         // Get the next task to be executed using the scheduler function.
         next_task = scheduler();
-        // Reconfig the next_task
-        task_reset(next_task);
-        // Verify if status of the next task is NOT in TASK_TERMINATED
-        if (next_task->status != TASK_TERMINATED)
+        // Wake up tasks that should
+        task_wakeup();
+        // If there is a next task to execute
+        if (next_task)
         {
+            // Reset the attributes of the next_task
+            task_reset(next_task);
             // Increase the amount of activations of the task
             next_task->activations++;
 #ifdef DEBUG
-            debug_print("PPOS: dispatcher_body()=> Dispatcher was activated %d times.\n", dispatcher.activations);
-            debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, next task id: %d, %d  activations.\n", user_tasks, next_task->id, next_task->activations);
+            debug_print("PPOS: dispatcher_body()=> Dispatcher activations: %d times.\n", dispatcher.activations);
+            debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, next task id: %d, next_task activations: %d.\n", user_tasks, next_task->id, next_task->activations);
 #endif
             // Perform a context switch to the next task.
             task_switch(next_task);
             // Add processing time to the execution time
             next_task->executionTime += next_task->processingTime;
-            // Increase the amount of activations of the dispatcher
-            dispatcher.activations++;
             // Handle the status of the next task after execution
             switch (next_task->status)
             {
@@ -189,7 +214,7 @@ void dispatcher_body()
             }
         }
 #ifdef DEBUG
-        queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)tasks_queue, print_element);
+        queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)ready_tasks, print_element);
 #endif
     }
     // Set the status of the dispatcher task
@@ -227,27 +252,17 @@ void handler(int signum)
         // Check if the task timer has reached zero or below
         if (task_timer == 0)
         {
-#ifdef DEBUG
-            debug_print("PPOS: handler()=> Task %d has preemption. Resetting the task timer.\n", current_task->id);
-#endif
             // Yield the current task to another one
             task_yield();
         }
         else
         {
-            // If in debug mode, print a message with the remaining task timer ticks
-#ifdef DEBUG
-            debug_print("PPOS: handler()=> Task %d still has %d ticks.\n", current_task->id, task_timer);
-#endif
             // Continue executing the current task
             return;
         }
     }
     else
     {
-#ifdef DEBUG
-        debug_print("PPOS: handler()=> Task %d is not preemption compatible.\n", current_task->id);
-#endif
         // Continue executing the current task
         return;
     }
@@ -313,7 +328,7 @@ void ppos_init()
     // Save the current context into the "context" attribute of the main task.
     getcontext(&(main_task.context));
     // Append the main task to the queue of tasks
-    queue_append((queue_t **)&tasks_queue, (queue_t *)&main_task);
+    queue_append((queue_t **)&ready_tasks, (queue_t *)&main_task);
 #ifdef DEBUG
     debug_print("PPOS: ppos_init()=> Starting the system. Main task id: %d, number of user tasks: %d.\n", last_id, user_tasks);
 #endif
@@ -325,6 +340,8 @@ void ppos_init()
     timer_init();
     // Set the task timer to its initial value
     task_timer = TASK_TIMER;
+    // Give control to the dispatcher
+    task_yield();
 }
 
 // Initialize a new Task. Returns <ID> of the new stack or ERROR CODE
@@ -370,20 +387,16 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     task->executionTime = 0;
     // Set the processor usage time
     task->processingTime = 0;
-    // Set the sleeping time
-    task->sleepingTime = 0;
-    // Set the queue of waiting suspended tasks
-    task->suspended = NULL;
     // Check if the task it is not the dispatcher
     if (task->id != dispatcher.id)
     {
         // Increment the user_tasks counter
         user_tasks++;
         // Append the task to the queue of tasks
-        queue_append((queue_t **)&tasks_queue, (queue_t *)task);
+        queue_append((queue_t **)&ready_tasks, (queue_t *)task);
 #ifdef DEBUG
         debug_print("PPOS: task_init()=> Task created with id %d, currently there are %d user tasks.\n", last_id, user_tasks);
-        queue_print("PPOS: task_init()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
+        queue_print("PPOS: task_init()=> Queue of tasks: ", (queue_t *)(ready_tasks), print_element);
 #endif
     }
     // Configure the task's context to execute 'start_func' with 'arg' when scheduled
@@ -401,10 +414,8 @@ int task_id()
 // This function voluntarily gives up the processor, allowing other tasks to run.
 void task_yield()
 {
-    // Suspend the current task
-    current_task->status = TASK_SUSPENDED;
-    // Dispatcher ready to execute
-    dispatcher.status = TASK_READY;
+    // Increase the amount of activations of the dispatcher
+    dispatcher.activations++;
     // Switch the execution to the dispatcher task, which will handle task scheduling.
     task_switch(&dispatcher);
 }
@@ -424,12 +435,6 @@ int task_switch(task_t *task)
     task_t *previous_task = current_task;
     // Update the current task pointer to the new task
     current_task = task;
-    // Update the status of the previous task
-    if (previous_task->status != TASK_TERMINATED)
-    {
-        // If it was not terminated put it on state TASK_SUSPENDED
-        previous_task->status = TASK_SUSPENDED;
-    }
     // Set the new task's status to TASK_RUNNING
     current_task->status = TASK_RUNNING;
 #ifdef DEBUG
@@ -513,16 +518,21 @@ void task_suspend(task_t **queue)
         // Exit with error code
         exit(1);
     }
-    // Remove the current task from the tasks_queue
-    if (queue_remove((queue_t **)(&tasks_queue), (queue_t *)current_task) != 0)
+    // Remove the current task from the ready_tasks
+    if (queue_remove((queue_t **)(&ready_tasks), (queue_t *)current_task) != 0)
     {
 #ifdef DEBUG
         // Print debug message if task removal failed
-        printf("PPOS: task_suspend()=> Failed to remove task %d from tasks_queue.\n", current_task->id);
+        printf("PPOS: task_suspend()=> Failed to remove task %d from ready_tasks.\n", current_task->id);
 #endif
         // Exit the program if task removal failed
         exit(1);
     }
+#ifdef DEBUG
+    // Print debug message if task removal failed
+    printf("PPOS: task_suspend()=> task %d removed from ready_tasks.\n", current_task->id);
+    queue_print("PPOS: task_suspend()=> Queue of ready tasks: ", (queue_t *)ready_tasks, print_element);
+#endif
     // Update the status of the current task to 'TASK_SUSPENDED'
     current_task->status = TASK_SUSPENDED;
     // Append the current task to the specified queue
@@ -535,6 +545,11 @@ void task_suspend(task_t **queue)
         // Exit the program if task append failed
         exit(1);
     }
+#ifdef DEBUG
+    // Print debug message if task append failed
+    printf("PPOS: task_suspend()=> task %d appended to the suspended queue of tasks.\n", current_task->id);
+    queue_print("PPOS: task_suspend()=> Queue of sleeping tasks: ", (queue_t *)suspended_tasks, print_element);
+#endif
     // Switch control to the dispatcher
     task_yield();
 }
@@ -558,26 +573,36 @@ void task_resume(task_t *task, task_t **queue)
         // Exit with error code
         exit(1);
     }
-    // Remove the current task from the tasks_queue
+    // Remove the current task from the ready_tasks
     if (queue_remove((queue_t **)queue, (queue_t *)task) != 0)
     {
 #ifdef DEBUG
         // Print debug message if task removal failed
-        printf("PPOS: task_resume()=> Failed to remove task %d from suspended queue.\n", current_task->id);
+        printf("PPOS: task_resume()=> Failed to remove task %d from suspended queue.\n", task->id);
 #endif
         // Exit the program if task removal failed
         exit(1);
     }
+#ifdef DEBUG
+    // Print debug message if task append failed
+    printf("PPOS: task_resume()=> task %d removed from the suspended queue of tasks.\n", task->id);
+    queue_print("PPOS: task_resume()=> Queue of sleeping tasks: ", (queue_t *)suspended_tasks, print_element);
+#endif
     task->status = TASK_READY;
-    if (queue_append((queue_t **)(&tasks_queue), (queue_t *)task) != 0)
+    if (queue_append((queue_t **)(&ready_tasks), (queue_t *)task) != 0)
     {
 #ifdef DEBUG
         // Print debug message if task append failed
-        printf("PPOS: task_resume()=> Failed to append task %d to the tasks_queue.\n", current_task->id);
+        printf("PPOS: task_resume()=> Failed to append task %d to the ready_tasks.\n", task->id);
 #endif
         // Exit the program if task append failed
         exit(1);
     }
+#ifdef DEBUG
+    // Print debug message if task append failed
+    printf("PPOS: task_resume()=> task %d appended to the ready_tasks.\n", task->id);
+    queue_print("PPOS: task_resume()=> Queue of ready tasks: ", (queue_t *)ready_tasks, print_element);
+#endif
 }
 
 int task_wait(task_t *task)
@@ -600,6 +625,9 @@ int task_wait(task_t *task)
     {
         task_suspend(&task->suspended);
     }
+#ifdef DEBUG
+    debug_print("PPOS: task_wait()=> task %d is going to wait\n.", task->id);
+#endif
     // Return the ID of the waited task
     return task->id;
 }
@@ -616,10 +644,11 @@ void task_sleep(int t)
     }
     // Set the amount of time the task will sleep
     current_task->sleepingTime = systime() + t;
+#ifdef DEBUG
+    debug_print("PPOS: task_sleep()=> current_task %d is going to sleep for %dms.\n", current_task->id, current_task->sleepingTime);
+#endif
     // Add the current_task to the queue of suspended tasks
-    task_suspend(&suspended_tasks_queue);
-    // Give control back to the dispatcher
-    // task_yield();
+    task_suspend(&suspended_tasks);
 }
 
 // Ends the current task with a specified exit code
@@ -657,18 +686,21 @@ void task_exit(int exit_code)
     // Print of values
     printf("Task %d exit: execution time %dms, processor time %dms, %d activations.\n", current_task->id, current_task->executionTime, current_task->processingTime, current_task->activations);
     // Remove task from the queue
-    if (queue_remove((queue_t **)&tasks_queue, (queue_t *)current_task) != 0)
+    if (queue_remove((queue_t **)&ready_tasks, (queue_t *)current_task) != 0)
     {
 #ifdef DEBUG
-        printf("PPOS: task_exit()=> Failed to remove terminated task %d from tasks_queue\n", current_task->id);
+        printf("PPOS: task_exit()=> Failed to remove terminated task %d from ready_tasks\n", current_task->id);
 #endif
     }
 #ifdef DEBUG
     // Log the task termination for debugging purposes
+    debug_print("PPOS: task_exit()=> terminated task %d removed from ready_tasks\n", current_task->id);
     debug_print("PPOS: task_exit()=> Task %d terminated with exit code %d, with %d activations.\n", current_task->id, exit_code, current_task->activations);
     debug_print("PPOS: task_exit()=> Currently there are %d user tasks.\n", user_tasks);
-    queue_print("PPOS: task_exit()=> Queue of tasks: ", (queue_t *)(tasks_queue), print_element);
+    queue_print("PPOS: task_exit()=> Queue of tasks: ", (queue_t *)(ready_tasks), print_element);
 #endif
+    // Increase the amount of activations of the dispatcher
+    dispatcher.activations++;
     // Transfer control to the dispatcher
     task_switch(&dispatcher);
 }

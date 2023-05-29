@@ -160,7 +160,7 @@ void task_wakeup()
                 {
                     break;
                 }
-                // Reset the pointer to the head of suspended task queue
+                // Reset the pointer to the head of suspended tasks queue
                 start = suspended_tasks;
                 // Move to the next task after potentially altering the queue
                 aux = next;

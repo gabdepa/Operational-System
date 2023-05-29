@@ -23,10 +23,11 @@
     } while (0)
 #endif
 
-task_t main_task;     // Main Task: This variable represents the main task of the program.
-task_t *current_task; // Current running Task: This pointer points to the task that is currently running.
-task_t *tasks_queue;  // Queue of tasks: This pointer represents the queue of all tasks, which includes tasks with different states (e.g., TASK_READY, TASK_RUNNING, TASK_TERMINATED).
-task_t dispatcher;    // Dispatcher: This variable represents the dispatcher task, which is responsible for managing tasks execution and switching between them.
+task_t main_task;              // Main Task: This variable represents the main task of the program.
+task_t *current_task;          // Current running Task: This pointer points to the task that is currently running.
+task_t *tasks_queue;           // Queue of tasks: This pointer represents the queue of all tasks, which includes tasks with different states (e.g., TASK_READY, TASK_RUNNING, TASK_TERMINATED).
+task_t *suspended_tasks_queue; // Queue of Suspended Tasks: This pointer represents the queue of tasks that are in state "TASK_SUSPENDED" and are putting to sleep.
+task_t dispatcher;             // Dispatcher: This variable represents the dispatcher task, which is responsible for managing tasks execution and switching between them.
 
 int last_id;              // Last Task ID: This variable keeps track of the last assigned task ID. It is used to generate unique IDs for new tasks.
 int user_tasks;           // Current quantity tasks of the user: This variable maintains a count of the current number of user tasks (excluding system tasks like the dispatcher). It is helpful for managing and monitoring the overall state of the system.
@@ -116,6 +117,35 @@ void task_reset(task_t *task)
         // Reset the dynamic back to be equal as the static
         task->dynamicPriority = task->staticPriority;
     }
+}
+
+void task_wakeup()
+{
+    // Queue of suspended tasks is empty
+    if (suspended_tasks_queue == NULL)
+    {
+        return;
+    }
+    // Initialize a pointer to the first suspended task in queue
+    task_t *aux = suspended_tasks_queue;
+    // Save the pointer to the first task as the starting point for the loop
+    task_t *start = aux;
+    // Declare a pointer to store the next task in the queue
+    task_t *next_aux;
+    // Start a loop that will go through each suspended task in queue
+    do
+    {
+        // Store the next task before resuming the current one
+        next_aux = aux->next;
+        if (systime() >= suspended_tasks_queue)
+        {
+            // Call the resume function for the current task
+            task_resume(aux, &suspended_tasks_queue);
+        }
+        // Move to the next task in the suspended tasks queue
+        aux = next_aux;
+        // Continue looping as long as the current task is not the head of the queue
+    } while (aux != start);
 }
 
 // The dispatcher_body function is responsible for managing the execution of user tasks.
@@ -336,10 +366,14 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     task->preemption = TRUE;
     // Set the number of activations
     task->activations = 0;
-    // Set the processor usage time
-    task->processingTime = 0;
     // Set the execution time
     task->executionTime = 0;
+    // Set the processor usage time
+    task->processingTime = 0;
+    // Set the sleeping time
+    task->sleepingTime = 0;
+    // Set the queue of waiting suspended tasks
+    task->suspended = NULL;
     // Check if the task it is not the dispatcher
     if (task->id != dispatcher.id)
     {
@@ -568,6 +602,24 @@ int task_wait(task_t *task)
     }
     // Return the ID of the waited task
     return task->id;
+}
+
+void task_sleep(int t)
+{
+    // Check if the current_task is NULL
+    if (!current_task)
+    {
+        // Print an error message indicating that the task is null
+        perror("ERROR: task_sleep()=> current_task is a NULL Pointer!\n");
+        // Terminate the program with error status
+        exit(1);
+    }
+    // Set the amount of time the task will sleep
+    current_task->sleepingTime = systime() + t;
+    // Add the current_task to the queue of suspended tasks
+    task_suspend(&suspended_tasks_queue);
+    // Give control back to the dispatcher
+    // task_yield();
 }
 
 // Ends the current task with a specified exit code

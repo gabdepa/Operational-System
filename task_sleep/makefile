@@ -21,7 +21,7 @@ pingpong-sleep: ppos_core.o pingpong-sleep.o queue.o
 
 # Declaring clean function
 clean :
-	$(RM) *.o *.log
+	$(RM) *.o *.log *.txt
 # Declaring purge clean function
 purge : clean
 	$(RM) pingpong-sleep

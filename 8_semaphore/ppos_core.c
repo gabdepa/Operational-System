@@ -720,7 +720,7 @@ void leave_cs(int *lock)
     (*lock) = 0;
 }
 
-// Initialize a semaphore "s"
+// Create a semaphore "s"
 int sem_init(semaphore_t *s, int value)
 {
     s->lock = 0;        // Initializes the semaphore lock to 0 indicating it is available.
@@ -765,7 +765,7 @@ int sem_down(semaphore_t *s)
     return 0;
 }
 
-// Free the use of the semaphore "s"
+// Release the semaphore "s"
 int sem_up(semaphore_t *s)
 {
     // Checks if the semaphore pointer is NULL
@@ -798,6 +798,7 @@ int sem_up(semaphore_t *s)
     return 0;
 }
 
+// Destroy the specified semaphore "s"
 int sem_destroy(semaphore_t *s)
 {
     // Checks if the semaphore pointer is NULL

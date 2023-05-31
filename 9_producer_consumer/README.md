@@ -1,8 +1,8 @@
 # Producer/Consumer System with Bounded Buffer
 
-This project involves utilizing your system, implemented with semaphore functions from the previous project, to construct a producer/consumer system with a limited buffer.
+This project involves utilizing my system, implemented with semaphore functions from the previous project(**`8_semaphore`**), to construct a producer/consumer system with a limited buffer.
 
-Here's the basic code structure for a producer/consumer system:
+Here's the basic code structure for the producer/consumer system:
 
 ## Producer
 ```

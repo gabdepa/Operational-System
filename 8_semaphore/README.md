@@ -20,7 +20,7 @@ This function call returns 0 in case of success or -1 in case of an error (semap
 
 ## Releasing a Semaphore
 
-**`**int sem_up (semaphore_t *s);`**
+**`int sem_up (semaphore_t *s);`**
 
 I implemented the Up operation on the semaphore pointed by **`s`**. This call is not blocking (the task that executes it does not lose the processor). If there are tasks waiting in the semaphore queue, the first one in the queue is woken up and returned to the ready tasks queue.
 

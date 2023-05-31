@@ -126,6 +126,7 @@ void task_reset(task_t *task)
     }
 }
 
+// This functions is used to wake up tasks that have slept for the specified time
 void task_wakeup()
 {
 #ifdef DEBUG
@@ -217,8 +218,6 @@ void dispatcher_body()
         queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)ready_tasks, print_element);
 #endif
     }
-    // Set the status of the dispatcher task
-    dispatcher.status = TASK_SUSPENDED;
     // If there are no more user tasks to execute and the current task running is the dispatcher
     if ((user_tasks == 0) && (current_task->id == dispatcher.id))
     {
@@ -248,6 +247,7 @@ void handler(int signum)
     // Check if the current task has preemption
     if (current_task->preemption == TRUE)
     {
+        // Decrement the timer of the task
         task_timer--;
         // Check if the task timer has reached zero or below
         if (task_timer == 0)
@@ -268,6 +268,7 @@ void handler(int signum)
     }
 }
 
+// Setup function to use SIGALARM
 void timer_init()
 {
     // Assign the 'handler' function as the signal handler for the action struct
@@ -411,7 +412,7 @@ int task_id()
     return current_task->id;
 }
 
-// This function voluntarily gives up the processor, allowing other tasks to run.
+// This function gives control back to the Dispatcher
 void task_yield()
 {
     // Increase the amount of activations of the dispatcher
@@ -457,7 +458,7 @@ int task_switch(task_t *task)
     }
 }
 
-// Get the value of the static priority of the task "task" or the current task
+// Get the value of the static priority of the task "task" or the current task, if "task" is not defined
 int task_getprio(task_t *task)
 {
     // If task "task" is a NULL pointer
@@ -495,15 +496,15 @@ void task_setprio(task_t *task, int prio)
     // If task "task" is a NULL pointer
     if (!task)
     {
-        // Change both prioritys of the current task
+        // Change both prioritys(dynamic and static) of the current task
         current_task->dynamicPriority = prio;
         current_task->staticPriority = prio;
     }
     else // task is not a NULL Pointer
     {
-        // Change both prioritys of the task
-        task->staticPriority = prio;
+        // Change both prioritys(dynamic and static) of the task
         task->dynamicPriority = prio;
+        task->staticPriority = prio;
     }
 }
 
@@ -554,7 +555,7 @@ void task_suspend(task_t **queue)
     task_yield();
 }
 
-// Resume the specified task
+// Resume the specified task "task"
 void task_resume(task_t *task, task_t **queue)
 {
     // If the given task is NULL, return an error code (1)
@@ -605,6 +606,7 @@ void task_resume(task_t *task, task_t **queue)
 #endif
 }
 
+// Suspend the current task until the give task "task" is terminated
 int task_wait(task_t *task)
 {
     // Check if the given task is null
@@ -632,6 +634,7 @@ int task_wait(task_t *task)
     return task->id;
 }
 
+// This function set the amount of time the current task should sleep
 void task_sleep(int t)
 {
     // Check if the current_task is NULL
@@ -651,7 +654,7 @@ void task_sleep(int t)
     task_suspend(&suspended_tasks);
 }
 
-// Ends the current task with a specified exit code
+// Ends the current task with a specified exit code and awake the waiting tasks on their queue
 void task_exit(int exit_code)
 {
     // Update the id of the last tasks

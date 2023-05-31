@@ -43,7 +43,7 @@ typedef struct task_t
   unsigned int executionTime; // Amount of time executing
   unsigned processingTime;    // Amount of time using the processor
   unsigned int sleepingTime;  // Amount of time the task will sleep
-  struct task_t *suspended;   // Queue for suspended tasks that are waiting
+  struct task_t *suspended;   // Queue for suspended tasks that are waiting a certain task to terminate
 } task_t;
 
 // Structure that defines a Semaphore

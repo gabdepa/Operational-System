@@ -21,14 +21,14 @@
 #define TRUE 0
 #define FALSE 1
 
-//Semaphore use
+// Semaphore use
 #define ACTIVE 1
 #define INACTIVE 0
 
 // Size of threads stack
 #define STACKSIZE 64 * 1024
 
-// Estrutura que define um Task Control Block (TCB)
+// Structure that defines a Task Control Block (TCB)
 typedef struct task_t
 {
   struct task_t *prev, *next; // Next and Previous elements of the queue
@@ -46,28 +46,28 @@ typedef struct task_t
   struct task_t *suspended;   // Queue for suspended tasks that are waiting
 } task_t;
 
-// estrutura que define um semáforo
+// Structure that defines a Semaphore
 typedef struct
 {
-  int lock; // Lock that indicates if the critical zone is being used
-  int counter; // Count how many tasks are waiting in the queue
-  int active;  // Indicates if the semaphore is ACTIVE or INACTIVE
+  int lock;      // Lock that indicates if the critical zone is being used
+  int counter;   // Count how many tasks are waiting in the queue
+  int active;    // Indicates if the semaphore is ACTIVE or INACTIVE
   task_t *queue; // Queue of tasks waiting to access the critical zone
 } semaphore_t;
 
-// estrutura que define um mutex
+// Structure that defines a Mutex
 typedef struct
 {
   // preencher quando necessário
 } mutex_t;
 
-// estrutura que define uma barreira
+// Structure that defines a Barrier
 typedef struct
 {
   // preencher quando necessário
 } barrier_t;
 
-// estrutura que define uma fila de mensagens
+// Structure that defines a Message Queue
 typedef struct
 {
   // preencher quando necessário

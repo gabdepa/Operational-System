@@ -70,9 +70,9 @@ int main()
     sem_init(&s_vacancy, BUFFER_SIZE);                     // Initialize vacancy semaphore
     task_init(&prod1, produtor, "p1");                     // Create producer task 1
     task_init(&prod2, produtor, "p2");                     // Create producer task 2
-    task_init(&prod3, produtor, "p3");                     // Create producer task 3
     task_init(&cons1, consumidor, "                  c1"); // Create consumer task 1
     task_init(&cons2, consumidor, "                  c2"); // Create consumer task 2
+    task_init(&prod3, consumidor, "                  c3"); // Create consumer task 3
     task_wait(&prod1);                                     // Wait for producer task 1 to finish
     return 0;                                              // Return 0 upon successful execution
 }

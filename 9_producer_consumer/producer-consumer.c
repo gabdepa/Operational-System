@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include "ppos.h"
 
-#define BUFFER_SIZE 10  // Define Buffer Size
-#define SLEEP_TIME 1000 // Define Sleep time
+#define BUFFER_SIZE 5    // Define Buffer Size
+#define SLEEP_TIME 1000  // Define Sleep time
+#define RANDOM_RANGE 100 // Define range to generate a random number
 
 // Initialize variables for last insertion and consumption
 int last_insertion = -1;
@@ -22,7 +23,7 @@ void produtor(void *arg)
     while (1)
     {
         task_sleep(SLEEP_TIME);            // Sleep for a defined time
-        item = rand() % 100;               // Generate a random item between 0 and 100
+        item = rand() % RANDOM_RANGE;      // Generate a random item between 0 and RANDOM_RANGE
         sem_down(&s_vacancy);              // Access vacancy semaphore
         sem_down(&s_buffer);               // Access buffer semaphore
         last_insertion++;                  // Increment last insertion
@@ -31,9 +32,9 @@ void produtor(void *arg)
             last_insertion = 0; // Reset last insertion
         }
         buffer[last_insertion] = item;                 // Add item to buffer
-        printf("%s produced %d\n", (char *)arg, item); // Print production message
         sem_up(&s_buffer);                             // Release buffer semaphore
         sem_up(&s_item);                               // Release item semaphore
+        printf("%s produced %d\n", (char *)arg, item); // Print production message
     }
 }
 
@@ -51,9 +52,10 @@ void consumidor(void *arg)
             last_consumed = 0; // Reset last consumed
         }
         item = buffer[last_consumed];                  // Get item from buffer
-        printf("%s consumed %d\n", (char *)arg, item); // Print consumption message
         sem_up(&s_buffer);                             // Release buffer semaphore
         sem_up(&s_vacancy);                            // Release vacancy semaphore
+        printf("%s consumed %d\n", (char *)arg, item); // Print consumption message
+        task_sleep(SLEEP_TIME);                        // Sleep for a defined time
     }
 }
 

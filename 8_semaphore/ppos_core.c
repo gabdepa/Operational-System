@@ -730,6 +730,7 @@ int sem_init(semaphore_t *s, int value)
     return 0;           // Returns 0 to signify successful semaphore initialization.
 }
 
+// Request the use of the semaphore "s"
 int sem_down(semaphore_t *s)
 {
     // Checks if the semaphore pointer is NULL
@@ -764,6 +765,7 @@ int sem_down(semaphore_t *s)
     return 0;
 }
 
+// Free the use of the semaphore "s"
 int sem_up(semaphore_t *s)
 {
     // Checks if the semaphore pointer is NULL
@@ -786,8 +788,8 @@ int sem_up(semaphore_t *s)
     s->counter++;
     // Leave the critical section, unlocking the semaphore
     leave_cs(&(s->lock));
-    // If the head of the queue exists
-    if (s->queue)
+    // If the head of the queue exists or the counter is less/equal than 0
+    if (s->queue || s->counter <= 0)
     {
         // Resume the head of the queue
         task_resume(s->queue, &(s->queue));

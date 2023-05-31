@@ -6,13 +6,16 @@ CFLAGS = -std=gnu99 -Wextra
 .PHONY : all clean debug
 
 # All tests files
-all : pingpong-sleep
+all : pingpong-semaphore pingpong-racecond
 # Debug rules
 debug: CFLAGS += $(DEBUG_FLAGS)
 debug: all
 
 # Compilation rule for the preemption stress file
-pingpong-sleep: ppos_core.o pingpong-sleep.o queue.o
+pingpong-semaphore: ppos_core.o pingpong-semaphore.o queue.o
+	gcc -o $@ $^
+
+pingpong-racecond: ppos_core.o pingpong-racecond.o queue.o
 	gcc -o $@ $^
 
 # Pattern rule that matches any .o file and its corresponding .c file.
@@ -24,4 +27,4 @@ clean :
 	$(RM) *.o *.log *.txt
 # Declaring purge clean function
 purge : clean
-	$(RM) pingpong-sleep
+	$(RM) pingpong-semaphore pingpong-racecond

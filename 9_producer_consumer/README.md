@@ -12,7 +12,7 @@ void producer()
       task_sleep (1000);
       item = random (0..99);
 
-      sem_down(&s_vaga);
+      sem_down(&s_vacancy);
 
       sem_down(&s_buffer);
       // insert item into the buffer
@@ -35,7 +35,7 @@ void consumer()
       // remove item from the buffer
       sem_up(&s_buffer);
 
-      sem_up(&s_vaga);
+      sem_up(&s_vacancy);
 
       // print item
       task_sleep (1000);

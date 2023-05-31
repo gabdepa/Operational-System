@@ -25,7 +25,7 @@
 
 task_t main_task;        // Main Task: This variable represents the main task of the program.
 task_t *current_task;    // Current running Task: This pointer points to the task that is currently running.
-task_t *ready_tasks;     // Queue of tasks: This pointer represents the queue of all tasks, which includes tasks with different states (e.g., TASK_READY, TASK_RUNNING, TASK_TERMINATED).
+task_t *ready_tasks;     // Queue of tasks: This pointer represents the queue of all tasks, which includes tasks with different states (e.g., TASK_READY, TASK_RUNNING).
 task_t *suspended_tasks; // Queue of Suspended Tasks: This pointer represents the queue of tasks that are in state "TASK_SUSPENDED" and were put to sleep.
 task_t dispatcher;       // Dispatcher: This variable represents the dispatcher task, which is responsible for managing tasks execution and switching between them.
 

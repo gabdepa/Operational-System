@@ -47,7 +47,7 @@ void consumer()
 - The main variables implemented in this project include:
     - **`item`**: An integer value between 0 and 99.
     - **`buffer`**: A queue of integers with capacity for up to 5 elements, initially empty, accessed using a FIFO policy. This were implemented using an integer array.
-    - **`s_buffer`**, **`s_item`**, **`s_vaga`**: Semaphores, properly initialized.
+    - **`s_buffer`**, **`s_item`**, **`s_vacancy`**: Semaphores, properly initialized.
 - The code implemented have 3 producers and 2 consumers. The output look something like this(but, feel free to try it!):
 
 ```

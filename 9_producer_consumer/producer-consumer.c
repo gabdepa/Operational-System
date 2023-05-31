@@ -8,7 +8,7 @@
 
 // Initialize variables for last insertion and consumption
 int last_insertion = -1;
-int last_consumed = -1;
+int last_consumption = -1;
 
 int buffer[BUFFER_SIZE]; // Initialize buffer
 
@@ -26,8 +26,7 @@ void produtor(void *arg)
         item = rand() % RANDOM_RANGE;      // Generate a random item between 0 and RANDOM_RANGE
         sem_down(&s_vacancy);              // Access vacancy semaphore
         sem_down(&s_buffer);               // Access buffer semaphore
-        last_insertion++;                  // Increment last insertion
-        if (last_insertion == BUFFER_SIZE) // Check if insertion has reached buffer limit
+        if (++(last_insertion) == BUFFER_SIZE) // Increment last insertion and Check if insertion has reached buffer limit
         {
             last_insertion = 0; // Reset last insertion
         }
@@ -46,12 +45,11 @@ void consumidor(void *arg)
     {
         sem_down(&s_item);                // Access item semaphore
         sem_down(&s_buffer);              // Access buffer semaphore
-        last_consumed++;                  // Increment last consumed
-        if (last_consumed == BUFFER_SIZE) // Check if consumption has reached buffer limit
+        if (++(last_consumption) == BUFFER_SIZE) //Increment last consumed and Check if consumption has reached buffer limit
         {
-            last_consumed = 0; // Reset last consumed
+            last_consumption = 0; // Reset last consumed
         }
-        item = buffer[last_consumed];                  // Get item from buffer
+        item = buffer[last_consumption];                  // Get item from buffer
         sem_up(&s_buffer);                             // Release buffer semaphore
         sem_up(&s_vacancy);                            // Release vacancy semaphore
         printf("%s consumed %d\n", (char *)arg, item); // Print consumption message

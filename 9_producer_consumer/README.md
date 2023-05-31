@@ -1,51 +1,66 @@
-# Semaphore Implementation
+# Producer/Consumer System with Bounded Buffer
 
-The purpose of this project was to implement classic semaphores in our system. The successfully implemented functions are described below.
+This project involves utilizing your system, implemented with semaphore functions from the previous project, to construct a producer/consumer system with a limited buffer.
 
-## Creating a Semaphore
-**`int sem_init (semaphore_t *s, int value);`**
+Here's the basic code structure for a producer/consumer system:
 
-I initialized a semaphore pointed by **`s`** with the initial **`value`** and an empty queue. The **`semaphore_t`** type was defined in the ppos_data.h file.
-This function call returns 0 in case of success or -1 in case of an error.
+## Producer
+```
+void producer()
+{
+   while (true)
+   {
+      task_sleep (1000);
+      item = random (0..99);
 
-## Requesting a Semaphore
+      sem_down(&s_vaga);
 
-**`int sem_down (semaphore_t *s);`**
+      sem_down(&s_buffer);
+      // insert item into the buffer
+      sem_up(&s_buffer);
 
-I implemented the Down operation on the semaphore pointed by **`s`**. This call can be blocking: if the semaphore counter is negative, the current task is suspended, inserted at the end of the semaphore queue, and the execution returns to the dispatcher. Otherwise, the task continues to execute without being suspended.
+      sem_up(&s_item);
+   }
+}
+```
 
-If the task is blocked, it will be reactivated when another task releases the semaphore (through the **`sem_up`** operation) or if the semaphore is destroyed (**`sem_destroy`** operation).
+## Consumer
+```
+void consumer()
+{
+   while (true)
+   {
+      sem_down(&s_item);
 
-This function call returns 0 in case of success or -1 in case of an error (semaphore does not exist or was destroyed).
+      sem_down(&s_buffer);
+      // remove item from the buffer
+      sem_up(&s_buffer);
 
-## Releasing a Semaphore
+      sem_up(&s_vaga);
 
-**`int sem_up (semaphore_t *s);`**
+      // print item
+      task_sleep (1000);
+   }
+}
+```
+## Key Notes
+- You need to create a file named **`producer-consumer.c`**, in which you'll define the producer, consumer, and main tasks.
+- The main variables needed to implement this project include:
+    - **`item`**: An integer value between 0 and 99.
+    - **`buffer`**: A queue of integers with capacity for up to 5 elements, initially empty, accessed using a FIFO policy. This can be implemented using an integer array or the previously developed queue library.
+    - **`s_buffer`**, **`s_item`**, **`s_vaga`**: Semaphores, properly initialized.
+- The implemented system should have 3 producers and 2 consumers. The output should look something like this:
 
-I implemented the Up operation on the semaphore pointed by **`s`**. This call is not blocking (the task that executes it does not lose the processor). If there are tasks waiting in the semaphore queue, the first one in the queue is woken up and returned to the ready tasks queue.
+```
+p1 produced 37
+p2 produced 11
+                             c1 consumed 37
+p3 produced 64
+p1 produced 21
+                             c2 consumed 11
+p2 produced 4
+                             c1 consumed 64
+...                          ...
+```
 
-This function call returns 0 in case of success or -1 in case of an error (semaphore does not exist or was destroyed).
-
-## Destroying a Semaphore
-
-**`int sem_destroy (semaphore_t *s);`**
-
-I destroyed the semaphore pointed by **`s`**, waking up all the tasks that were waiting for it.
-
-This function call returns 0 in case of success or -1 in case of an error.
-
-By implementing these functions, I've added semaphore support to our system, providing a means of synchronizing access to resources and effectively managing concurrent tasks.
-
-## Handling Race Conditions
-
-In the development process, I recognized the potential for race conditions if two threads tried to access the same semaphore simultaneously. Such scenarios could lead to inconsistencies in the internal variables of the semaphores. To tackle this, I ensured that the functions implementing the semaphores were protected using a mechanism of mutual exclusion.
-
-Since it was clear that we couldn't use semaphores to solve this problem (due to the potential recursive conflict), I resorted to a more primitive mechanism based on busy waiting. For this purpose, I employed atomic operations to ensure thread-safe access to the semaphores.
-
-This atomic operations are implemented in functions:
-
-**`void enter_cs(int *lock);`**
-&
-**`void leave_cs(int *lock);`**
-
-Through this approach, I was able to mitigate the risks of race conditions and ensure the robust and reliable functioning of semaphore operations within concurrent threads.
+Please note, the numbers are consumed in the sequence they were produced, indicating the buffer's FIFO behavior.

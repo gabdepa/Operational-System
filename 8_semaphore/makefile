@@ -11,7 +11,7 @@ all : pingpong-semaphore pingpong-racecond
 debug: CFLAGS += $(DEBUG_FLAGS)
 debug: all
 
-# Compilation rule for the preemption stress file
+# Compilation rule for test files
 pingpong-semaphore: ppos_core.o pingpong-semaphore.o queue.o
 	gcc -o $@ $^
 

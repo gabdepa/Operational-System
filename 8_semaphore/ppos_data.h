@@ -27,12 +27,12 @@
 // Estrutura que define um Task Control Block (TCB)
 typedef struct task_t
 {
-  struct task_t *prev, *next; // ponteiros para usar em filas
-  int id;                     // identificador da tarefa
+  struct task_t *prev, *next; // Next and Previous elements of the queue
+  int id;                     // Identificator of the Task
   short status;               // TASK_READY, TASK_RUNNING, TASK_SUSPENDED, ...
-  short int staticPriority;   // static priority of the task
-  short int dynamicPriority;  // dynamic priority of the task
-  ucontext_t context;         // contexto armazenado da tarefa
+  short int staticPriority;   // Static priority of the task
+  short int dynamicPriority;  // Dynamic priority of the task
+  ucontext_t context;         // Context storage in the task
   short int preemption;       // Preemption: True or False
   int timer;                  // Timer of the task
   unsigned int activations;   // Number of times the task was activated
@@ -45,7 +45,10 @@ typedef struct task_t
 // estrutura que define um semáforo
 typedef struct
 {
-  // preencher quando necessário
+  int lock; // Lock that indicates if the critical zone is being used
+  int counter; // Count how many tasks are waiting in the queue
+  int alive; 
+  task_t *queue // Queue of tasks waiting to access the critical zone
 } semaphore_t;
 
 // estrutura que define um mutex

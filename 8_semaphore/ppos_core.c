@@ -53,6 +53,7 @@ void print_element(void *ptr)
 // Determines the next task to be executed
 task_t *scheduler()
 {
+    // Check if there are tasks in the queue of "ready_tasks"
     if (ready_tasks)
     {
         // Set lowest_priority_task to the first task in the queue
@@ -132,7 +133,7 @@ void task_wakeup()
 #ifdef DEBUG
     queue_print("PPOS: task_wakeup()=> Queue of sleeping tasks: ", (queue_t *)suspended_tasks, print_element);
 #endif
-    // Check if the queue exists
+    // Check if there are tasks in the queue of "suspended_tasks"
     if (suspended_tasks)
     {
         // Pointer to the head of suspended tasks queue

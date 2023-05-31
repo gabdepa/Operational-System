@@ -54,16 +54,16 @@ void consumer()
 
 ```
 ...                          ...
-
-p1 produced 37
-p2 produced 11
-                             c1 consumed 37
-p3 produced 64
-p1 produced 21
-                             c2 consumed 11
-p2 produced 4
-                             c1 consumed 64
+p1 produced 7
+p2 produced 88
+                  c1 consumed 7
+                  c2 consumed 88
+p1 produced 29
+p2 produced 8
+                  c3 consumed 29
+                  c2 consumed 8
 ...                          ...
+
 ```
 
 Please note, the numbers are consumed in the sequence they were produced, indicating the buffer's FIFO behavior.

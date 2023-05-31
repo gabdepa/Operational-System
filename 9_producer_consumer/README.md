@@ -2,6 +2,8 @@
 
 This project involves utilizing my system, implemented with semaphore functions from the previous project(**`8_semaphore`**), to construct a producer/consumer system with a limited buffer.
 
+![Schema](https://wiki.inf.ufpr.br/maziero/lib/exe/fetch.php?cache=&media=so:coord-prodcons.png)
+
 Here's the basic code structure for the producer/consumer system:
 ## Producer
 ```

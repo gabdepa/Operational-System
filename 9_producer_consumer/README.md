@@ -44,12 +44,12 @@ void consumer()
 }
 ```
 ## Key Notes
-- You need to create a file named **`producer-consumer.c`**, in which you'll define the producer, consumer, and main tasks.
-- The main variables needed to implement this project include:
+- I've created a file named **`producer-consumer.c`**, in which i've defined the producer, consumer, and main tasks.
+- The main variables implemented in this project include:
     - **`item`**: An integer value between 0 and 99.
-    - **`buffer`**: A queue of integers with capacity for up to 5 elements, initially empty, accessed using a FIFO policy. This can be implemented using an integer array or the previously developed queue library.
+    - **`buffer`**: A queue of integers with capacity for up to 5 elements, initially empty, accessed using a FIFO policy. This were implemented using an integer array or the previously developed queue library.
     - **`s_buffer`**, **`s_item`**, **`s_vaga`**: Semaphores, properly initialized.
-- The implemented system should have 3 producers and 2 consumers. The output should look something like this:
+- The implemented have 3 producers and 2 consumers. The output look something like this(but, feel free to try it on your own):
 
 ```
 p1 produced 37

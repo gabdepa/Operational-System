@@ -5,7 +5,7 @@ The purpose of this project was to implement classic semaphores in our system. T
 ## Creating a Semaphore
 **`int sem_init (semaphore_t *s, int value);`**
 
-I initialized a semaphore pointed by **`s`** with the initial **`value`** and an empty queue. The **`semaphore_t`** type was defined in the pos_data.h file.
+I initialized a semaphore pointed by **`s`** with the initial **`value`** and an empty queue. The **`semaphore_t`** type was defined in the ppos_data.h file.
 This function call returns 0 in case of success or -1 in case of an error.
 
 ## Requesting a Semaphore

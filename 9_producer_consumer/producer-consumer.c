@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "ppos.h"
 
 #define BUFFER_SIZE 5    // Define Buffer Size
@@ -22,10 +23,10 @@ void produtor(void *arg)
     int item;
     while (1)
     {
-        task_sleep(SLEEP_TIME);            // Sleep for a defined time
-        item = rand() % RANDOM_RANGE;      // Generate a random item between 0 and RANDOM_RANGE
-        sem_down(&s_vacancy);              // Access vacancy semaphore
-        sem_down(&s_buffer);               // Access buffer semaphore
+        task_sleep(SLEEP_TIME);                // Sleep for a defined time
+        item = rand() % RANDOM_RANGE;          // Generate a random item between 0 and RANDOM_RANGE
+        sem_down(&s_vacancy);                  // Access vacancy semaphore
+        sem_down(&s_buffer);                   // Access buffer semaphore
         if (++(last_insertion) == BUFFER_SIZE) // Increment last insertion and Check if insertion has reached buffer limit
         {
             last_insertion = 0; // Reset last insertion
@@ -43,13 +44,13 @@ void consumidor(void *arg)
     int item;
     while (1)
     {
-        sem_down(&s_item);                // Access item semaphore
-        sem_down(&s_buffer);              // Access buffer semaphore
-        if (++(last_consumption) == BUFFER_SIZE) //Increment last consumed and Check if consumption has reached buffer limit
+        sem_down(&s_item);                       // Access item semaphore
+        sem_down(&s_buffer);                     // Access buffer semaphore
+        if (++(last_consumption) == BUFFER_SIZE) // Increment last consumed and Check if consumption has reached buffer limit
         {
             last_consumption = 0; // Reset last consumed
         }
-        item = buffer[last_consumption];                  // Get item from buffer
+        item = buffer[last_consumption];               // Get item from buffer
         sem_up(&s_buffer);                             // Release buffer semaphore
         sem_up(&s_vacancy);                            // Release vacancy semaphore
         printf("%s consumed %d\n", (char *)arg, item); // Print consumption message
@@ -61,6 +62,7 @@ void consumidor(void *arg)
 int main()
 {
     printf("main : início\n");
+    srand(time(0));                                        // Use current time as seed for random generator
     ppos_init();                                           // Initialize ppos
     sem_init(&s_buffer, 1);                                // Initialize buffer semaphore
     sem_init(&s_item, 0);                                  // Initialize item semaphore

@@ -709,7 +709,8 @@ void task_exit(int exit_code)
 void enter_cs(int *lock)
 {
     // Atomic OR (Intel macro for GCC)
-    while (__sync_fetch_and_or(lock, 1)); // Busy Waiting
+    while (__sync_fetch_and_or(lock, 1))
+        ; // Busy Waiting
 }
 
 // Leave critical section
@@ -719,26 +720,24 @@ void leave_cs(int *lock)
     (*lock) = 0;
 }
 
+// Initialize a semaphore "s"
 int sem_init(semaphore_t *s, int value)
 {
-    s->lock = 0;
-    s->counter = value;
-    s->alive = ALIVE;
-    s->queue = NULL;
-    return 0;
+    s->lock = 0;        // Initializes the semaphore lock to 0 indicating it is available.
+    s->counter = value; // Sets the semaphore's counter to the provided value.
+    s->active = ACTIVE;   // Marks the semaphore as active.
+    s->queue = NULL;    // Initializes the semaphore's queue to NULL, indicating no tasks are waiting.
+    return 0;           // Returns 0 to signify successful semaphore initialization.
 }
 
-int sem_down (semaphore_t *s)
+int sem_down(semaphore_t *s)
 {
-
 }
 
-int sem_up (semaphore_t *s)
+int sem_up(semaphore_t *s)
 {
-
 }
 
-int sem_destroy (semaphore_t *s)
+int sem_destroy(semaphore_t *s)
 {
-
 }

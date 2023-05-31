@@ -22,8 +22,8 @@
 #define FALSE 1
 
 //Semaphore use
-#define ALIVE 1
-#define DEAD 0
+#define ACTIVE 1
+#define INACTIVE 0
 
 // Size of threads stack
 #define STACKSIZE 64 * 1024
@@ -51,7 +51,7 @@ typedef struct
 {
   int lock; // Lock that indicates if the critical zone is being used
   int counter; // Count how many tasks are waiting in the queue
-  int alive; 
+  int active; 
   task_t *queue // Queue of tasks waiting to access the critical zone
 } semaphore_t;
 

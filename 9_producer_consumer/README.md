@@ -63,7 +63,6 @@ p2 produced 8
                   c3 consumed 29
                   c2 consumed 8
 ...                          ...
-
 ```
 
 Please note, the numbers are consumed in the sequence they were produced, indicating the buffer's FIFO behavior.

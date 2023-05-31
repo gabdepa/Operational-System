@@ -1,6 +1,6 @@
 # Producer/Consumer System with Bounded Buffer
 
-This project involves utilizing my system, implemented with semaphore functions from the previous project(**`8_semaphore`**), to construct a producer/consumer system with a limited buffer.
+This project involves utilizing my system, implemented with semaphore functions from the previous project(**`8_semaphore`**), to construct a producer/consumer system with a limited buffer. The image below ilustrate this:
 
 ![Schema](https://wiki.inf.ufpr.br/maziero/lib/exe/fetch.php?cache=&media=so:coord-prodcons.png)
 

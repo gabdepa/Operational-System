@@ -2,7 +2,7 @@
 #ifndef __PPOS_DATA__
 #define __PPOS_DATA__
 
-#include <ucontext.h> // biblioteca POSIX de trocas de contexto
+#include <ucontext.h> // POSIX Librarie of context switchs
 
 // Status value
 #define TASK_READY 0

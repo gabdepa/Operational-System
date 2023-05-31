@@ -7,15 +7,16 @@
 #define SLEEP_TIME 1000  // Define Sleep time
 #define RANDOM_RANGE 100 // Define range to generate a random number
 
+// Initialize task variables and semaphore variables
+task_t prod1, prod2, prod3, cons1, cons2;
+semaphore_t s_buffer, s_item, s_vacancy;
+
 // Initialize variables for last insertion and consumption
 int last_insertion = -1;
 int last_consumption = -1;
 
-int buffer[BUFFER_SIZE]; // Initialize buffer
-
-// Initialize task variables and semaphore variables
-task_t prod1, prod2, prod3, cons1, cons2;
-semaphore_t s_buffer, s_item, s_vacancy;
+// Initialize buffer
+int buffer[BUFFER_SIZE];
 
 // Producer function
 void produtor(void *arg)

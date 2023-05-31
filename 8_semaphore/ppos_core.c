@@ -132,6 +132,7 @@ void task_wakeup()
 #ifdef DEBUG
     queue_print("PPOS: task_wakeup()=> Queue of sleeping tasks: ", (queue_t *)suspended_tasks, print_element);
 #endif
+    // Check if the queue exists
     if (suspended_tasks)
     {
         // Pointer to the head of suspended tasks queue
@@ -147,6 +148,7 @@ void task_wakeup()
             debug_print("PPOS: task_wakeup()=> head of the queue is task %d, current in task %d, next is %d.\n", start->id, aux->id, aux->next->id);
             queue_print("PPOS: task_wakeup()=> Queue of sleeping tasks: \n", (queue_t *)suspended_tasks, print_element);
 #endif
+            // If it is time for the task to wakeup
             if (systime() >= aux->sleepingTime)
             {
                 // Save the next task before resuming
@@ -159,6 +161,7 @@ void task_wakeup()
                 // If the queue is empty
                 if (!suspended_tasks)
                 {
+                    // Exit the loop, therefore exiting this function
                     break;
                 }
                 // Reset the pointer to the head of suspended tasks queue
@@ -181,7 +184,7 @@ void dispatcher_body()
 {
     // Set the status of the dispatcher task
     dispatcher.status = TASK_RUNNING;
-    // Create new variable to represent the next task
+    // Create new pointer variable to represent the next task
     task_t *next_task;
     // The dispatcher loop continues running until there are no more user tasks.
     while (user_tasks > 0)
@@ -205,7 +208,7 @@ void dispatcher_body()
             task_switch(next_task);
             // Add processing time to the execution time
             next_task->executionTime += next_task->processingTime;
-            // Handle the status of the next task after execution
+            // Handle the status of task "next_task" after execution
             switch (next_task->status)
             {
             case TASK_READY:

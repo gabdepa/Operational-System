@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include "ppos.h"
 
-#define BUFFER_SIZE 10 // Define buffer size
+#define BUFFER_SIZE 10 // Define Buffer Size
+#define SLEEP_TIME 1000 // Define Sleep time
 
 // Initialize variables for last insertion and consumption
 int last_insertion = -1;
@@ -20,12 +21,12 @@ void produtor(void *arg)
     int item;
     while (1)
     {
-        task_sleep(1000);                 // Sleep for a defined time
+        task_sleep(SLEEP_TIME);                 // Sleep for a defined time
         item = rand() % 100;              // Generate a random item
         sem_down(&s_vacancy);             // Access vacancy semaphore
         sem_down(&s_buffer);              // Access buffer semaphore
         last_insertion++;                 // Increment last insertion
-        if (last_insertion == TAM_BUFFER) // Check if insertion has reached buffer limit
+        if (last_insertion == BUFFER_SIZE) // Check if insertion has reached buffer limit
         {
             last_insertion = 0; // Reset last insertion
         }

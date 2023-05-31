@@ -21,6 +21,10 @@
 #define TRUE 0
 #define FALSE 1
 
+//Semaphore use
+#define ALIVE 1
+#define DEAD 0
+
 // Size of threads stack
 #define STACKSIZE 64 * 1024
 

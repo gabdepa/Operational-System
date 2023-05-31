@@ -704,3 +704,41 @@ void task_exit(int exit_code)
     // Transfer control to the dispatcher
     task_switch(&dispatcher);
 }
+
+// Enter critical section
+void enter_cs(int *lock)
+{
+    // Atomic OR (Intel macro for GCC)
+    while (__sync_fetch_and_or(lock, 1)); // Busy Waiting
+}
+
+// Leave critical section
+void leave_cs(int *lock)
+{
+    // Free the lock
+    (*lock) = 0;
+}
+
+int sem_init(semaphore_t *s, int value)
+{
+    s->lock = 0;
+    s->counter = value;
+    s->alive = ALIVE;
+    s->queue = NULL;
+    return 0;
+}
+
+int sem_down (semaphore_t *s)
+{
+
+}
+
+int sem_up (semaphore_t *s)
+{
+
+}
+
+int sem_destroy (semaphore_t *s)
+{
+
+}

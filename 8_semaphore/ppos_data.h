@@ -1,4 +1,4 @@
-// Estruturas de dados internas do sistema operacional
+// Internal structures of the Operational System
 #ifndef __PPOS_DATA__
 #define __PPOS_DATA__
 

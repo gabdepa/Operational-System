@@ -710,7 +710,7 @@ void enter_cs(int *lock)
 {
     // Atomic OR (Intel macro for GCC)
     while (__sync_fetch_and_or(lock, 1))
-        ; // Busy Waiting
+        ;
 }
 
 // Leave critical section
@@ -725,19 +725,111 @@ int sem_init(semaphore_t *s, int value)
 {
     s->lock = 0;        // Initializes the semaphore lock to 0 indicating it is available.
     s->counter = value; // Sets the semaphore's counter to the provided value.
-    s->active = ACTIVE;   // Marks the semaphore as active.
+    s->active = ACTIVE; // Marks the semaphore as active.
     s->queue = NULL;    // Initializes the semaphore's queue to NULL, indicating no tasks are waiting.
     return 0;           // Returns 0 to signify successful semaphore initialization.
 }
 
 int sem_down(semaphore_t *s)
 {
+    // Checks if the semaphore pointer is NULL
+    if (!s)
+    {
+        // Prints an error message
+        perror("ERROR: sem_down()=> semaphore pointed is NULL!.\n");
+        // Returns with an error code
+        return -1;
+    }
+    // Checks if the semaphore is INACTIVE
+    if (s->active == INACTIVE)
+    {
+        // Prints an error message
+        perror("ERROR: sem_down()=> semaphore pointed is INACTIVE!.\n");
+        // Returns with an error code
+        return -1;
+    }
+    // Enter critical section, locking the semaphore
+    enter_cs(&(s->lock));
+    // Decrement the semaphore's counter
+    s->counter--;
+    // Leave the critical section, unlocking the semaphore
+    leave_cs(&s->lock);
+    // If the semaphore's counter is less than zero
+    if (s->counter < 0)
+    {
+        // Suspend the current task and add it to the semaphore queue
+        task_suspend(&(s->queue));
+    }
+    // Returns zero to indicate success
+    return 0;
 }
 
 int sem_up(semaphore_t *s)
 {
+    // Checks if the semaphore pointer is NULL
+    if (!s)
+    {
+        // Prints an error message
+        perror("ERROR: sem_up()=> semaphore pointed is NULL!.\n");
+        // Returns with an error code
+        return -1;
+    }
+    // Checks if the semaphore is INACTIVE
+    if (s->active == INACTIVE)
+    {
+        // Returns with an error code
+        return -1;
+    }
+    // Enter critical section, locking the semaphore
+    enter_cs(&(s->lock));
+    // Increment the semaphore's counter
+    s->counter++;
+    // Leave the critical section, unlocking the semaphore
+    leave_cs(&(s->lock));
+    // If the head of the queue exists
+    if (s->queue)
+    {
+        // Resume the head of the queue
+        task_resume(s->queue, &(s->queue));
+    }
+    // Returns zero to indicate success
+    return 0;
 }
 
 int sem_destroy(semaphore_t *s)
 {
+    // Checks if the semaphore pointer is NULL
+    if (!s)
+    {
+        // Prints an error message
+        perror("ERROR: sem_destroy()=> semaphore pointed is already NULL!.\n");
+        // Returns with an error code
+        return -1;
+    }
+    // Checks if the semaphore is INACTIVE
+    if (s->active == INACTIVE)
+    {
+        // Prints an error message
+        perror("ERROR: sem_destroy()=> semaphore pointed is already INACTIVE!.\n");
+        // Returns with an error code
+        return -1;
+    }
+    // Enter critical section, locking the semaphore
+    enter_cs(&(s->lock));
+    // Sets the semaphore's state to INACTIVE
+    s->active = INACTIVE;
+    // Set the semaphore counter to INACTIVE
+    s->counter = INACTIVE;
+    // Loops through all the tasks in the semaphore's queue
+    while (s->queue)
+    {
+        // Resumes the head task of the queue
+        task_resume(s->queue, &s->queue);
+    }
+    // Resets the semaphore's queue
+    s->queue = NULL;
+    // Leave the critical section, unlocking the semaphore
+    leave_cs(&(s->lock));
+    // Returns zero to indicate success
+    return 0;
 }

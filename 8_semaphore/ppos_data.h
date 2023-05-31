@@ -51,8 +51,8 @@ typedef struct
 {
   int lock; // Lock that indicates if the critical zone is being used
   int counter; // Count how many tasks are waiting in the queue
-  int active; 
-  task_t *queue // Queue of tasks waiting to access the critical zone
+  int active;  // Indicates if the semaphore is ACTIVE or INACTIVE
+  task_t *queue; // Queue of tasks waiting to access the critical zone
 } semaphore_t;
 
 // estrutura que define um mutex

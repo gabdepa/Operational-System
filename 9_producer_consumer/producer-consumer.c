@@ -22,7 +22,7 @@ void produtor(void *arg)
     while (1)
     {
         task_sleep(SLEEP_TIME);            // Sleep for a defined time
-        item = rand() % 100;               // Generate a random item
+        item = rand() % 100;               // Generate a random item between 0 and 100
         sem_down(&s_vacancy);              // Access vacancy semaphore
         sem_down(&s_buffer);               // Access buffer semaphore
         last_insertion++;                  // Increment last insertion

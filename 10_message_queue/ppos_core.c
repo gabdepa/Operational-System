@@ -855,7 +855,8 @@ int mqueue_init(mqueue_t *queue, int max_msgs, int msg_size)
     {
         // Prints an error message
         perror("ERROR: mqueue_init()=> Queue pointed is NULL!.\n");
-        return ERR_QUEUE_NULL; // Return error if queue pointer is NULL
+        // Return error if queue pointer is NULL
+        return ERR_QUEUE_NULL;
     }
     // Allocate memory for the queue buffer
     queue->buffer_data = malloc(msg_size * max_msgs);

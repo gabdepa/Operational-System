@@ -63,14 +63,16 @@ typedef struct
 // Structure that defines a Message Queue
 typedef struct
 {
-  semaphore_t item, vacancy, buffer;
-  int msg_size;
-  int max_msgs;
-  int status;
-  int last_insertion;
-  int last_consumption;
-  unsigned int is_full;
-  void *buffer_data;
+  semaphore_t item;     // Item: This semaphore is used to keep track of the number of items in the queue. It is incremented after a message is sent to the queue, and decremented after a message is received from the queue.
+  semaphore_t vacancy;  // Vacancy: This semaphore is used to keep track of the number of free spaces in the queue. It is decremented after a message is sent to the queue and incremented after a message is received from the queue.
+  semaphore_t buffer;   // Buffer:  This semaphore is used to ensure mutual exclusion while accessing the queue buffer during send and receive operations, preventing data corruption due to concurrent access.
+  int msg_size;         // Size of a Message: The size of each message in the queue. This is used when allocating memory for the buffer, sending, and receiving messages.
+  int max_msgs;         // Maximum Messages: This is used to calculate buffer memory size, and manage the queue's full and empty states.
+  int status;           // Status: Queue Status(ACTIVE, INACTIVE). This flag is checked before performing operations like sending, receiving, or destroying the queue.
+  int last_insertion;   // Last Insertion point in the queue: Determines the latest point of insertion on the queue. This is used to track the latest position a message was added to the queue, which helps to manage the queue as a circular buffer.
+  int last_consumption; // Last Consumption point in the queue: Determines the latest point of comsumption on the queue. This is used to track the latest position a message was removed from the queue, which helps to manage the queue as a circular buffer.
+  unsigned int is_full; // "Is Full?": Verify if the queue is Full.
+  void *buffer_data;    // Buffer Data: Queue buffer that holds all the data in the Message Queue
 } mqueue_t;
 
 // Structure that defines a Mutex

@@ -868,20 +868,25 @@ int mqueue_init(mqueue_t *queue, int max_msgs, int msg_size)
         // Return error if memory allocation failed
         return ERR_MEM_ALLOC;
     }
-    // Initialize queue properties
+    // Set msg_size. The size of each message in the queue.
     queue->msg_size = msg_size;
+    // Set the maximum number of messages the queue can hold.
     queue->max_msgs = max_msgs;
+    // Set the queue's status as active.
     queue->status = ACTIVE;
+    // Initialize the last insertion and consumption indices.
     queue->last_insertion = queue->last_consumption = -1;
-    // Initialize semaphores
+    // Initialize the "item" semaphore.
     sem_init(&queue->item, 0);
+    // Initialize the "vacancy" semaphore.
     sem_init(&queue->vacancy, max_msgs);
+    // Initialize the "buffer" semaphore.
     sem_init(&queue->buffer, 1);
     // Successful initialization
     return 0;
 }
 
-// Sent a message "msg" to the queue "queue"
+// Sent a message "msg" to the queue "queue", returning 0 on success or ERR_* otherwise
 int mqueue_send(mqueue_t *queue, void *msg)
 {
     // Check if queue pointer is valid
@@ -910,8 +915,9 @@ int mqueue_send(mqueue_t *queue, void *msg)
     }
     // Buffer position variable
     void *buffer_position;
-    // Decrement semaphores
+    // Decreases 'vacancy' semaphore, blocking if queue is full (no vacancies).
     sem_down(&queue->vacancy);
+    // Decreases 'buffer' semaphore, ensuring exclusive queue access (blocks if queue is currently being accessed).
     sem_down(&queue->buffer);
     // Update last insertion index in a circular fashion
     queue->last_insertion = (queue->last_insertion + 1) % queue->max_msgs;
@@ -919,20 +925,25 @@ int mqueue_send(mqueue_t *queue, void *msg)
     buffer_position = queue->buffer_data + queue->last_insertion * queue->msg_size;
     // Copy message to the buffer position
     memcpy(buffer_position, msg, queue->msg_size);
-    // Check if the queue is full after insertion
+    // If the last insertion point in the queue is the same as the last consumption point...
     if (queue->last_insertion == queue->last_consumption)
+    {
+        // The queue is full.
         queue->is_full = TRUE;
-    // Increment semaphores
+    }
+    // Increases 'item' semaphore, indicating a new message is available.
     sem_up(&queue->item);
+    // Increases 'buffer' semaphore, releasing exclusive access to the queue.
     sem_up(&queue->buffer);
     // Message sent successfully
     return 0;
 }
 
-// Receive a message "msg" from the queue "queue"
+// Receive a message "msg" from the queue "queue", returning 0 on success or ERR_* otherwise
 int mqueue_recv(mqueue_t *queue, void *msg)
 {
-    if (!queue) // Check if queue pointer is valid
+    // Check if queue pointer is valid
+    if (!queue)
     {
         // Prints an error message
         perror("ERROR: mqueue_recv()=> Message Queue pointed is NULL!.\n");
@@ -957,8 +968,9 @@ int mqueue_recv(mqueue_t *queue, void *msg)
     }
     // Buffer position variable
     void *buffer_position;
-    // Decrement semaphores
+    // Decreases 'item' semaphore, signifying a message is being retrieved.
     sem_down(&queue->item);
+    // Decreases 'buffer' semaphore, requesting exclusive access to the queue.
     sem_down(&queue->buffer);
     // Set queue as not full
     queue->is_full = FALSE;
@@ -968,14 +980,15 @@ int mqueue_recv(mqueue_t *queue, void *msg)
     buffer_position = queue->buffer_data + queue->last_consumption * queue->msg_size;
     // Copy message from the buffer to the output variable
     memcpy(msg, buffer_position, queue->msg_size);
-    // Increment semaphores
+    // Increases 'vacancy' semaphore, signifying one more empty slot in the queue.
     sem_up(&queue->vacancy);
+    // Increases 'buffer' semaphore, releasing exclusive access to the queue.
     sem_up(&queue->buffer);
     // Message received successfully
     return 0;
 }
 
-// Terminate a Message Queue "queue"
+// Terminate a Message Queue "queue", returning 0 on success or ERR_* otherwise
 int mqueue_destroy(mqueue_t *queue)
 {
     // Check if queue pointer is valid
@@ -998,9 +1011,11 @@ int mqueue_destroy(mqueue_t *queue)
     queue->status = INACTIVE;
     // Free allocated memory
     free(queue->buffer_data);
-    // Destroy semaphores
+    // Destroys 'vacancy' semaphore, cleaning up resources associated with it.
     sem_destroy(&queue->vacancy);
+    // Destroys 'item' semaphore, cleaning up resources associated with it.
     sem_destroy(&queue->item);
+    // Destroys 'buffer' semaphore, cleaning up resources associated with it.
     sem_destroy(&queue->buffer);
     // Queue destroyed successfully
     return 0;
@@ -1025,10 +1040,18 @@ int mqueue_msgs(mqueue_t *queue)
         // Return error if queue is inactive
         return ERR_QUEUE_INACTIVE;
     }
-    // Calculate number of messages in queue based on insertion and consumption indices
+    // If the last insertion and consumption are at the same position.
     if (queue->last_insertion == queue->last_consumption)
+    {
+        // If the queue is full return maximum number of messages, otherwise, return 0.
         return (queue->is_full) ? queue->max_msgs : 0;
+    }
+    // If the last inserted message position is greater than the last consumed message position.
     if (queue->last_insertion > queue->last_consumption)
+    {
+        // Return the difference which represents the number of unread messages.
         return queue->last_insertion - queue->last_consumption;
+    }
+    // If none of the above conditions are met, calculate the number of unread messages considering that the queue is circular.
     return queue->max_msgs - (queue->last_consumption - queue->last_insertion);
 }

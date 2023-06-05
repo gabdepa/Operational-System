@@ -714,7 +714,6 @@ void task_exit(int exit_code)
 }
 
 /************************************************************ SEMAPHORE ************************************************************/
-
 // Enter critical section
 void enter_cs(int *lock)
 {

@@ -1,20 +1,20 @@
 # Flags utilized
 DEBUG_FLAGS = -g -DDEBUG
-CFLAGS = -std=gnu99 -Wextra
+CFLAGS = -std=gnu99 -Wextra -lm
 
 # Declaring calls to debug and clean unused files
 .PHONY : all clean debug
 
 # All tests files
-all : producer-consumer
+all : pingpong-mqueue
 
 # Debug rules
 debug: CFLAGS += $(DEBUG_FLAGS)
 debug: all
 
 # Compilation rule for test files
-producer-consumer: ppos_core.o producer-consumer.o queue.o
-	gcc -o $@ $^
+pingpong-mqueue: ppos_core.o pingpong-mqueue.o queue.o
+	gcc -o $@ $^ $(CFLAGS)
 
 # Pattern rule that matches any .o file and its corresponding .c file.
 %.o: %.c
@@ -25,4 +25,4 @@ clean :
 	$(RM) *.o *.log *.txt
 # Declaring purge clean function
 purge : clean
-	$(RM) producer-consumer
+	$(RM) pingpong-mqueue

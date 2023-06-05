@@ -18,8 +18,8 @@
 #define TEMPORIZER 1000
 
 // Boolean
-#define TRUE 0
-#define FALSE 1
+#define TRUE 1
+#define FALSE 0
 
 // Semaphore use
 #define ACTIVE 1
@@ -27,6 +27,9 @@
 
 // Size of threads stack
 #define STACKSIZE 64 * 1024
+
+// Message Queue use
+#define MAX_BUFFER 5
 
 // Structure that defines a Task Control Block (TCB)
 typedef struct task_t
@@ -70,7 +73,14 @@ typedef struct
 // Structure that defines a Message Queue
 typedef struct
 {
-  // preencher quando necessário
+  semaphore_t buffer, vaga, item;
+  int size_msg;
+  int max_msg;
+  int status;
+  int last_position;
+  int last_item;
+  void *data_buffer;
+  unsigned int is_full;
 } mqueue_t;
 
 #endif

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <string.h>
 #include "ppos.h"
 #include "ppos_data.h"
 #include "queue.h"
@@ -712,6 +713,8 @@ void task_exit(int exit_code)
     task_switch(&dispatcher);
 }
 
+/************************************************************ SEMAPHORE ************************************************************/
+
 // Enter critical section
 void enter_cs(int *lock)
 {
@@ -842,4 +845,115 @@ int sem_destroy(semaphore_t *s)
     leave_cs(&(s->lock));
     // Returns zero to indicate success
     return 0;
+}
+
+/************************************************************ MESSAGE QUEUE ************************************************************/
+// Initialize a Message Queue, returning 0 on success or -1 otherwise
+#define ERR_QUEUE_NULL -2
+#define ERR_QUEUE_INACTIVE -3
+#define ERR_MEM_ALLOC -4
+
+// Initialize a message queue.
+int mqueue_init(mqueue_t *queue, int max_msgs, int msg_size)
+{
+    if (!queue)
+        return ERR_QUEUE_NULL;
+
+    queue->data_buffer = malloc(msg_size * max_msgs);
+    if (queue->data_buffer == NULL)
+    {
+        return ERR_MEM_ALLOC; // memory allocation failed
+    }
+
+    queue->max_msg = max_msgs;
+    queue->size_msg = msg_size;
+    queue->status = ACTIVE;
+    queue->last_position = queue->last_item = -1;
+    sem_init(&queue->buffer, 1);
+    sem_init(&queue->item, 0);
+    sem_init(&queue->vaga, max_msgs);
+    return 0;
+}
+
+int mqueue_send(mqueue_t *queue, void *msg)
+{
+    if (!queue)
+        return ERR_QUEUE_NULL;
+
+    if (queue->status == INACTIVE)
+        return ERR_QUEUE_INACTIVE;
+
+    sem_down(&queue->vaga);
+    sem_down(&queue->buffer);
+
+    queue->last_position = (queue->last_position + 1) % queue->max_msg;
+
+    void *buffer_position = queue->data_buffer + queue->last_position * queue->size_msg;
+    memcpy(buffer_position, msg, queue->size_msg);
+
+    if (queue->last_position == queue->last_item)
+        queue->is_full = TRUE;
+
+    sem_up(&queue->item);
+    sem_up(&queue->buffer);
+
+    return 0;
+}
+
+int mqueue_recv(mqueue_t *queue, void *msg)
+{
+    if (!queue)
+        return ERR_QUEUE_NULL;
+
+    if (queue->status == INACTIVE)
+        return ERR_QUEUE_INACTIVE;
+
+    sem_down(&queue->item);
+    sem_down(&queue->buffer);
+
+    queue->is_full = FALSE;
+    queue->last_item = (queue->last_item + 1) % queue->max_msg;
+
+    void *buffer_position = queue->data_buffer + queue->last_item * queue->size_msg;
+    memcpy(msg, buffer_position, queue->size_msg);
+
+    sem_up(&queue->vaga);
+    sem_up(&queue->buffer);
+
+    return 0;
+}
+
+// Destroy a message queue.
+int mqueue_destroy(mqueue_t *queue)
+{
+    if (!queue)
+        return ERR_QUEUE_NULL;
+
+    if (queue->status == INACTIVE)
+        return ERR_QUEUE_INACTIVE;
+
+    queue->status = INACTIVE;
+    free(queue->data_buffer);
+    sem_destroy(&queue->vaga);
+    sem_destroy(&queue->item);
+    sem_destroy(&queue->buffer);
+
+    return 0;
+}
+
+int mqueue_msgs(mqueue_t *queue)
+{
+    if (!queue)
+        return ERR_QUEUE_NULL;
+
+    if (queue->status == INACTIVE)
+        return ERR_QUEUE_INACTIVE;
+
+    if (queue->last_position == queue->last_item)
+        return (queue->is_full) ? queue->max_msg : 0;
+
+    if (queue->last_position > queue->last_item)
+        return queue->last_position - queue->last_item;
+
+    return queue->max_msg - (queue->last_item - queue->last_position);
 }

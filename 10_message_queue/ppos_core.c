@@ -922,7 +922,7 @@ int mqueue_send(mqueue_t *queue, void *msg)
     // Update last insertion index in a circular fashion
     queue->last_insertion = (queue->last_insertion + 1) % queue->max_msgs;
     // Calculate the buffer position for new insertion
-    buffer_position = queue->buffer_data + queue->last_insertion * queue->msg_size;
+    buffer_position = queue->buffer_data + (queue->last_insertion * queue->msg_size);
     // Copy message to the buffer position
     memcpy(buffer_position, msg, queue->msg_size);
     // If the last insertion point in the queue is the same as the last consumption point...
@@ -977,7 +977,7 @@ int mqueue_recv(mqueue_t *queue, void *msg)
     // Update last consumption index in a circular fashion
     queue->last_consumption = (queue->last_consumption + 1) % queue->max_msgs;
     // Calculate the buffer position for consumption
-    buffer_position = queue->buffer_data + queue->last_consumption * queue->msg_size;
+    buffer_position = queue->buffer_data + (queue->last_consumption * queue->msg_size);
     // Copy message from the buffer to the output variable
     memcpy(msg, buffer_position, queue->msg_size);
     // Increases 'vacancy' semaphore, signifying one more empty slot in the queue.

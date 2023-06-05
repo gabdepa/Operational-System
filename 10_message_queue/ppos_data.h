@@ -29,7 +29,9 @@
 #define STACKSIZE 64 * 1024
 
 // Message Queue use
-#define MAX_BUFFER 5
+#define ERR_QUEUE_NULL -2
+#define ERR_QUEUE_INACTIVE -3
+#define ERR_MEM_ALLOC -4
 
 // Structure that defines a Task Control Block (TCB)
 typedef struct task_t
@@ -58,6 +60,19 @@ typedef struct
   task_t *queue; // Queue of tasks waiting to access the critical zone
 } semaphore_t;
 
+// Structure that defines a Message Queue
+typedef struct
+{
+  semaphore_t item, vacancy, buffer;
+  int msg_size;
+  int max_msgs;
+  int status;
+  int last_insertion;
+  int last_consumption;
+  unsigned int is_full;
+  void *buffer_data;
+} mqueue_t;
+
 // Structure that defines a Mutex
 typedef struct
 {
@@ -69,18 +84,5 @@ typedef struct
 {
   // preencher quando necessário
 } barrier_t;
-
-// Structure that defines a Message Queue
-typedef struct
-{
-  semaphore_t buffer, vaga, item;
-  int size_msg;
-  int max_msg;
-  int status;
-  int last_position;
-  int last_item;
-  void *data_buffer;
-  unsigned int is_full;
-} mqueue_t;
 
 #endif

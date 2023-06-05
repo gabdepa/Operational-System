@@ -848,112 +848,187 @@ int sem_destroy(semaphore_t *s)
 }
 
 /************************************************************ MESSAGE QUEUE ************************************************************/
-// Initialize a Message Queue, returning 0 on success or -1 otherwise
-#define ERR_QUEUE_NULL -2
-#define ERR_QUEUE_INACTIVE -3
-#define ERR_MEM_ALLOC -4
-
-// Initialize a message queue.
+// Initialize a Message Queue, returning 0 on success or ERR_* otherwise
 int mqueue_init(mqueue_t *queue, int max_msgs, int msg_size)
 {
+    // Check if queue pointer is valid
     if (!queue)
-        return ERR_QUEUE_NULL;
-
-    queue->data_buffer = malloc(msg_size * max_msgs);
-    if (queue->data_buffer == NULL)
     {
-        return ERR_MEM_ALLOC; // memory allocation failed
+        // Prints an error message
+        perror("ERROR: mqueue_init()=> Queue pointed is NULL!.\n");
+        return ERR_QUEUE_NULL; // Return error if queue pointer is NULL
     }
-
-    queue->max_msg = max_msgs;
-    queue->size_msg = msg_size;
+    // Allocate memory for the queue buffer
+    queue->buffer_data = malloc(msg_size * max_msgs);
+    // Check if memory allocation was successful
+    if (!queue->buffer_data)
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_init()=> Could allocate buffer of data!.\n");
+        // Return error if memory allocation failed
+        return ERR_MEM_ALLOC;
+    }
+    // Initialize queue properties
+    queue->msg_size = msg_size;
+    queue->max_msgs = max_msgs;
     queue->status = ACTIVE;
-    queue->last_position = queue->last_item = -1;
-    sem_init(&queue->buffer, 1);
+    queue->last_insertion = queue->last_consumption = -1;
+    // Initialize semaphores
     sem_init(&queue->item, 0);
-    sem_init(&queue->vaga, max_msgs);
+    sem_init(&queue->vacancy, max_msgs);
+    sem_init(&queue->buffer, 1);
+    // Successful initialization
     return 0;
 }
 
+// Sent a message "msg" to the queue "queue"
 int mqueue_send(mqueue_t *queue, void *msg)
 {
+    // Check if queue pointer is valid
     if (!queue)
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_send()=> Message Queue pointed is NULL!.\n");
+        // Return error if queue pointer is NULL
         return ERR_QUEUE_NULL;
-
+    }
+    // Check if queue is active
     if (queue->status == INACTIVE)
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_send()=> Message Queue pointed is INACTIVE!.\n");
+        // Return error if queue is inactive
         return ERR_QUEUE_INACTIVE;
-
-    sem_down(&queue->vaga);
+    }
+    // Check if message pointer is valid
+    if (!msg)
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_send()=> Message pointed is NULL!.\n");
+        // Return error if message pointer is NULL
+        return -1;
+    }
+    // Buffer position variable
+    void *buffer_position;
+    // Decrement semaphores
+    sem_down(&queue->vacancy);
     sem_down(&queue->buffer);
-
-    queue->last_position = (queue->last_position + 1) % queue->max_msg;
-
-    void *buffer_position = queue->data_buffer + queue->last_position * queue->size_msg;
-    memcpy(buffer_position, msg, queue->size_msg);
-
-    if (queue->last_position == queue->last_item)
+    // Update last insertion index in a circular fashion
+    queue->last_insertion = (queue->last_insertion + 1) % queue->max_msgs;
+    // Calculate the buffer position for new insertion
+    buffer_position = queue->buffer_data + queue->last_insertion * queue->msg_size;
+    // Copy message to the buffer position
+    memcpy(buffer_position, msg, queue->msg_size);
+    // Check if the queue is full after insertion
+    if (queue->last_insertion == queue->last_consumption)
         queue->is_full = TRUE;
-
+    // Increment semaphores
     sem_up(&queue->item);
     sem_up(&queue->buffer);
-
+    // Message sent successfully
     return 0;
 }
 
+// Receive a message "msg" from the queue "queue"
 int mqueue_recv(mqueue_t *queue, void *msg)
 {
-    if (!queue)
+    if (!queue) // Check if queue pointer is valid
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_recv()=> Message Queue pointed is NULL!.\n");
+        // Return error if queue pointer is NULL
         return ERR_QUEUE_NULL;
-
+    }
+    // Check if queue is active
     if (queue->status == INACTIVE)
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_recv()=> Message Queue pointed is INACTIVE!.\n");
+        // Return error if queue is inactive
         return ERR_QUEUE_INACTIVE;
-
+    }
+    // Check if message pointer is valid
+    if (!msg)
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_recv()=> Message pointed is NULL!.\n");
+        // Return error if message pointer is NULL
+        return -1;
+    }
+    // Buffer position variable
+    void *buffer_position;
+    // Decrement semaphores
     sem_down(&queue->item);
     sem_down(&queue->buffer);
-
+    // Set queue as not full
     queue->is_full = FALSE;
-    queue->last_item = (queue->last_item + 1) % queue->max_msg;
-
-    void *buffer_position = queue->data_buffer + queue->last_item * queue->size_msg;
-    memcpy(msg, buffer_position, queue->size_msg);
-
-    sem_up(&queue->vaga);
+    // Update last consumption index in a circular fashion
+    queue->last_consumption = (queue->last_consumption + 1) % queue->max_msgs;
+    // Calculate the buffer position for consumption
+    buffer_position = queue->buffer_data + queue->last_consumption * queue->msg_size;
+    // Copy message from the buffer to the output variable
+    memcpy(msg, buffer_position, queue->msg_size);
+    // Increment semaphores
+    sem_up(&queue->vacancy);
     sem_up(&queue->buffer);
-
+    // Message received successfully
     return 0;
 }
 
-// Destroy a message queue.
+// Terminate a Message Queue "queue"
 int mqueue_destroy(mqueue_t *queue)
 {
+    // Check if queue pointer is valid
     if (!queue)
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_destroy()=> Message Queue pointed is already NULL!.\n");
+        // Return error if queue pointer is NULL
         return ERR_QUEUE_NULL;
-
+    }
+    // Check if queue is active
     if (queue->status == INACTIVE)
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_destroy()=> Message Queue pointed is already INACTIVE!.\n");
+        // Return error if queue is inactive
         return ERR_QUEUE_INACTIVE;
-
+    }
+    // Set queue as inactive
     queue->status = INACTIVE;
-    free(queue->data_buffer);
-    sem_destroy(&queue->vaga);
+    // Free allocated memory
+    free(queue->buffer_data);
+    // Destroy semaphores
+    sem_destroy(&queue->vacancy);
     sem_destroy(&queue->item);
     sem_destroy(&queue->buffer);
-
+    // Queue destroyed successfully
     return 0;
 }
 
+// Return the number of messages in the queue "queue"
 int mqueue_msgs(mqueue_t *queue)
 {
+    // Check if queue pointer is valid
     if (!queue)
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_msgs()=> Message Queue pointed is NULL!.\n");
+        // Return error if queue pointer is NULL
         return ERR_QUEUE_NULL;
-
+    }
+    // Check if queue is active
     if (queue->status == INACTIVE)
+    {
+        // Prints an error message
+        perror("ERROR: mqueue_msgs()=> Message Queue pointed is INACTIVE!.\n");
+        // Return error if queue is inactive
         return ERR_QUEUE_INACTIVE;
-
-    if (queue->last_position == queue->last_item)
-        return (queue->is_full) ? queue->max_msg : 0;
-
-    if (queue->last_position > queue->last_item)
-        return queue->last_position - queue->last_item;
-
-    return queue->max_msg - (queue->last_item - queue->last_position);
+    }
+    // Calculate number of messages in queue based on insertion and consumption indices
+    if (queue->last_insertion == queue->last_consumption)
+        return (queue->is_full) ? queue->max_msgs : 0;
+    if (queue->last_insertion > queue->last_consumption)
+        return queue->last_insertion - queue->last_consumption;
+    return queue->max_msgs - (queue->last_consumption - queue->last_insertion);
 }

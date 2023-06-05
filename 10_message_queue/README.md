@@ -2,7 +2,7 @@
 
 A message queue is a structure used by tasks for communication through the exchange of fixed-size messages. Each queue can store up to **`N`** fixed-size messages, respecting a FIFO access policy. The below image describes the proccess:
 
-[!Schema](https://wiki.inf.ufpr.br/maziero/lib/exe/fetch.php?cache=&media=so:prod-soma-cons.png)
+![Schema](https://wiki.inf.ufpr.br/maziero/lib/exe/fetch.php?cache=&media=so:prod-soma-cons.png)
 
 Access to the queue is blocking. This means that a task attempting to send a message to a full queue must wait until spaces are available in the queue. Similarly, a task wishing to receive messages from an empty queue must wait until a message is available in that queue.
 

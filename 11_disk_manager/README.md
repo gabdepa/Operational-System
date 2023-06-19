@@ -13,6 +13,7 @@ Upon returning from the call, the variable **`num_blocks`** contains the number 
 Tasks can read and write data blocks on the virtual disk through the following calls (both blocking):
 
 **`int disk_block_read  (int block, void* buffer) ;`**
+
 **`int disk_block_write (int block, void* buffer) ;`**
 
  - **`block`**: position (block number) to read or write on the disk (is between 0 and numblocks-1);

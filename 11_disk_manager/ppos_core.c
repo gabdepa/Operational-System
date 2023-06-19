@@ -29,6 +29,7 @@ task_t *current_task;    // Current running Task: This pointer points to the tas
 task_t *ready_tasks;     // Queue of tasks: This pointer represents the queue of all tasks, which includes tasks with different states (e.g., TASK_READY, TASK_RUNNING).
 task_t *suspended_tasks; // Queue of Suspended Tasks: This pointer represents the queue of tasks that are in state "TASK_SUSPENDED" and were put to sleep.
 task_t dispatcher;       // Dispatcher: This variable represents the dispatcher task, which is responsible for managing tasks execution and switching between them.
+extern task_t mngDiskTask;
 
 int last_id;              // Last Task ID: This variable keeps track of the last assigned task ID. It is used to generate unique IDs for new tasks.
 int user_tasks;           // Current quantity tasks of the user: This variable maintains a count of the current number of user tasks (excluding system tasks like the dispatcher). It is helpful for managing and monitoring the overall state of the system.
@@ -223,23 +224,19 @@ void dispatcher_body()
         queue_print("PPOS: dispatcher_body()=> Queue of tasks: ", (queue_t *)ready_tasks, print_element);
 #endif
     }
-    // If there are no more user tasks to execute and the current task running is the dispatcher
-    if ((user_tasks == 0) && (current_task->id == dispatcher.id))
-    {
-        // Update the id of the last task to be the dispatcher id
-        last_id = current_task->id;
-        // Change the status of the currently running task(dispatcher) to TASK_TERMINATED
-        current_task->status = TASK_TERMINATED;
-        // Total time of execution. Current time - amount of execution time
-        current_task->executionTime += (systime() - current_task->executionTime);
-        // Print of values
-        printf("Dispatcher Task %d: execution time %dms, processor time %dms, %d activations.\n", current_task->id, current_task->executionTime, current_task->processingTime, current_task->activations);
+    // Update the id of the last task to be the dispatcher id
+    last_id = current_task->id;
+    // Change the status of the currently running task(dispatcher) to TASK_TERMINATED
+    current_task->status = TASK_TERMINATED;
+    // Total time of execution. Current time - amount of execution time
+    current_task->executionTime += (systime() - current_task->executionTime);
+    // Print of values
+    printf("Dispatcher Task %d: execution time %dms, processor time %dms, %d activations.\n", current_task->id, current_task->executionTime, current_task->processingTime, current_task->activations);
 #ifdef DEBUG
-        debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, last task id was: %d with status %d. Exiting program.\n", user_tasks, last_id, current_task->status);
+    debug_print("PPOS: dispatcher_body()=> Number of user tasks: %d, last task id was: %d with status %d. Exiting program.\n", user_tasks, last_id, current_task->status);
 #endif
-        // Exit with success
-        exit(0);
-    }
+    // Exit with success
+    exit(0);
 }
 
 // Define the signal handler function with the signal number as its parameter
@@ -394,12 +391,12 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     // Set the processor usage time
     task->processingTime = 0;
     // Check if the task it is not the dispatcher
-    if (task->id != dispatcher.id)
+    if (task != &dispatcher && task != &mngDiskTask)
     {
-        // Increment the user_tasks counter
-        user_tasks++;
         // Append the task to the queue of tasks
         queue_append((queue_t **)&ready_tasks, (queue_t *)task);
+        // Increment the user_tasks counter
+        user_tasks++;
 #ifdef DEBUG
         debug_print("PPOS: task_init()=> Task created with id %d, currently there are %d user tasks.\n", last_id, user_tasks);
         queue_print("PPOS: task_init()=> Queue of tasks: ", (queue_t *)(ready_tasks), print_element);

@@ -1,8 +1,10 @@
+// GRR20197155 Gabriel Razzolini Pires De Paula
+
+// Including libs needed
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 #include "ppos.h"
-#include "ppos_data.h"
 #include "ppos_disk.h"
 #include "disk.h"
 #include "queue.h"
@@ -22,21 +24,21 @@ void diskDriverBody()
     {
         // Decrease the semaphore count (lock)
         sem_down(&disk.semaphore);
-        // If disk signal is set
+        // If a disk signal is generated
         if (disk_signal)
         {
-            // Get the task from the disk request
+            // Get the HEAD task from the disk request(FCFS)
             task_t *task = disk.request->task;
+            // Remove the request from the queue
+            queue_remove((queue_t **)&disk.requests, (queue_t *)disk.request);
             // Set the task status as ready
             task->status = TASK_READY;
             // Resume the task
             task_resume(task, &disk.queue);
-            // Remove the request from the queue
-            queue_remove((queue_t **)&disk.requests, (queue_t *)disk.request);
-            // Reset disk signal
-            disk_signal = FALSE;
             // Free memory allocated to the request
             free(disk.request);
+            // Reset disk signal
+            disk_signal = FALSE;
         }
         // Get the status of the disk
         int disk_status = disk_cmd(DISK_CMD_STATUS, 0, 0);
@@ -83,10 +85,10 @@ void handle_signal() // Signal handling function
     // If disk manager task is suspended
     if (disk_manager.status == TASK_SUSPENDED)
     {
-        // Set disk manager task as ready
-        disk_manager.status = TASK_READY;
         // Add disk manager task to ready queue
         queue_append((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
+        // Set disk manager task as ready
+        disk_manager.status = TASK_READY;
         return;
     }
     else
@@ -133,7 +135,7 @@ int disk_mgr_init(int *numBlocks, int *blockSize)
     task_init(&disk_manager, diskDriverBody, NULL);
     // Set the disk manager task status as suspended
     disk_manager.status = TASK_SUSPENDED;
-    // Sigaction configuration:
+    /*************************************** SIGACTION CONFIGURATION ****************************************/
     // Set the signal handler function
     action2.sa_handler = handle_signal;
     // Empty the signal mask

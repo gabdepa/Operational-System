@@ -1,17 +1,7 @@
-// PingPongOS - PingPong Operating System
-// Prof. Carlos A. Maziero, DINF UFPR
-// Versão 1.2 -- Julho de 2017
-
-// interface do gerente de disco rígido (block device driver)
-
 #ifndef __DISK_MGR__
 #define __DISK_MGR__
 
 #include "ppos_data.h"
-
-// estruturas de dados e rotinas de inicializacao e acesso
-// a um dispositivo de entrada/saida orientado a blocos,
-// tipicamente um disco rigido.
 
 typedef enum
 {

@@ -13,33 +13,41 @@
 // a um dispositivo de entrada/saida orientado a blocos,
 // tipicamente um disco rigido.
 
-typedef struct request_t {
+typedef enum
+{
+	READ,
+	WRITE
+} requestStatusT;
+
+typedef struct request_t
+{
 	struct request_t *next, *prev;
 	task_t *req;
-	char type;
+	requestStatusT operation;
 	int block;
 	void *buffer;
 } request_t;
 
 // estrutura que representa um disco no sistema operacional
 
-typedef struct {
+typedef struct
+{
 	request_t *request;
 	request_t *req_queue;
 	task_t *queue;
-    semaphore_t sem;
-} disk_t ;
+	semaphore_t semaphore;
+} disk_t;
 
 // inicializacao do gerente de disco
 // retorna -1 em erro ou 0 em sucesso
 // numBlocks: tamanho do disco, em blocos
 // blockSize: tamanho de cada bloco do disco, em bytes
-int disk_mgr_init (int *numBlocks, int *blockSize) ;
+int disk_mgr_init(int *numBlocks, int *blockSize);
 
 // leitura de um bloco, do disco para o buffer
-int disk_block_read (int block, void *buffer) ;
+int disk_block_read(int block, void *buffer);
 
 // escrita de um bloco, do buffer para o disco
-int disk_block_write (int block, void *buffer) ;
+int disk_block_write(int block, void *buffer);
 
 #endif

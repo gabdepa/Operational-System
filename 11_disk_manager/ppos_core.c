@@ -29,7 +29,7 @@ task_t *current_task;    // Current running Task: This pointer points to the tas
 task_t *ready_tasks;     // Queue of tasks: This pointer represents the queue of all tasks, which includes tasks with different states (e.g., TASK_READY, TASK_RUNNING).
 task_t *suspended_tasks; // Queue of Suspended Tasks: This pointer represents the queue of tasks that are in state "TASK_SUSPENDED" and were put to sleep.
 task_t dispatcher;       // Dispatcher: This variable represents the dispatcher task, which is responsible for managing tasks execution and switching between them.
-extern task_t mngDiskTask;
+extern task_t disk_manager;
 
 int last_id;              // Last Task ID: This variable keeps track of the last assigned task ID. It is used to generate unique IDs for new tasks.
 int user_tasks;           // Current quantity tasks of the user: This variable maintains a count of the current number of user tasks (excluding system tasks like the dispatcher). It is helpful for managing and monitoring the overall state of the system.
@@ -391,7 +391,7 @@ int task_init(task_t *task, void (*start_func)(void *), void *arg)
     // Set the processor usage time
     task->processingTime = 0;
     // Check if the task it is not the dispatcher
-    if (task != &dispatcher && task != &mngDiskTask)
+    if (task != &dispatcher && task != &disk_manager)
     {
         // Append the task to the queue of tasks
         queue_append((queue_t **)&ready_tasks, (queue_t *)task);
@@ -557,7 +557,7 @@ void task_suspend(task_t **queue)
     task_yield();
 }
 
-// Resume the specified task "task"
+// Resume the specified task "task", removing it from the queue "queue" and adding to the queue of ready_tasks
 void task_resume(task_t *task, task_t **queue)
 {
     // If the given task is NULL, return an error code (1)

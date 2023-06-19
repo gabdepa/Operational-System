@@ -10,31 +10,17 @@
 extern task_t *current_task;
 extern task_t *ready_tasks;
 disk_t disk;
-task_t mngDiskTask;
+task_t disk_manager;
 int signal_disk;
 struct sigaction action2;
-void handle_signal();
-
-static request_t *request(char reqType, void *buf, int block)
-{
-    request_t *req = malloc(sizeof(request_t));
-    if (!req)
-        return 0;
-    req->req = current_task;
-    req->type = reqType;
-    req->buffer = buf;
-    req->block = block;
-    req->next = req->prev = NULL;
-    return req;
-}
 
 void handle_signal()
 {
     signal_disk = TRUE;
-    if (mngDiskTask.status == TASK_SUSPENDED)
+    if (disk_manager.status == TASK_SUSPENDED)
     {
-        mngDiskTask.status = TASK_READY;
-        queue_append((queue_t **)&ready_tasks, (queue_t *)&mngDiskTask);
+        disk_manager.status = TASK_READY;
+        queue_append((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
     }
 }
 
@@ -42,13 +28,12 @@ void diskDriverBody()
 {
     while (TRUE)
     {
-        sem_down(&disk.sem);
+        sem_down(&disk.semaphore);
         if (signal_disk)
         {
             task_t *task = disk.request->req;
             task->status = TASK_READY;
-            queue_remove((queue_t **)&disk.queue, (queue_t *)task);
-            queue_append((queue_t **)&ready_tasks, (queue_t *)task);
+            task_resume(task, &disk.queue);
 
             queue_remove((queue_t **)&disk.req_queue, (queue_t *)disk.request);
 
@@ -56,17 +41,26 @@ void diskDriverBody()
             free(disk.request);
         }
         int status_disk = disk_cmd(DISK_CMD_STATUS, 0, 0);
-        if ((status_disk == 1) && (disk.req_queue))
+        if ((status_disk == TRUE) && (disk.req_queue))
         {
             disk.request = disk.req_queue;
-            if (disk.request->type == 'R')
+            if (disk.request->operation == READ)
+            {
                 disk_cmd(DISK_CMD_READ, disk.request->block, disk.request->buffer);
-            else
+            }
+            else if (disk.request->operation == WRITE)
+            {
                 disk_cmd(DISK_CMD_WRITE, disk.request->block, disk.request->buffer);
+            }
+            else
+            {
+                perror("ERROR: diskDriverBody()=> Unknown request!\n");
+                exit(1);
+            }
         }
-        sem_up(&disk.sem);
-        mngDiskTask.status = TASK_SUSPENDED;
-        queue_remove((queue_t **)&ready_tasks, (queue_t *)&mngDiskTask);
+        sem_up(&disk.semaphore);
+        disk_manager.status = TASK_SUSPENDED;
+        queue_remove((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
         task_yield();
     }
 }
@@ -78,65 +72,63 @@ int disk_mgr_init(int *numBlocks, int *blockSize)
         return -1;
 
     signal_disk = FALSE;
-    sem_init(&disk.sem, 1);
-    task_init(&mngDiskTask, diskDriverBody, NULL);
-    mngDiskTask.status = TASK_SUSPENDED;
-    queue_remove((queue_t **)&ready_tasks, (queue_t *)&mngDiskTask);
-
+    sem_init(&disk.semaphore, 1);
+    task_init(&disk_manager, diskDriverBody, NULL);
+    disk_manager.status = TASK_SUSPENDED;
+    queue_remove((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
     action2.sa_handler = handle_signal;
     sigemptyset(&action2.sa_mask);
     action2.sa_flags = 0;
     if (sigaction(SIGUSR1, &action2, 0) < 0)
     {
-        perror("Erro em sigaction: ");
+        perror("ERROR: disk_mgr_init()=> Error on sigaction!\n");
         exit(1);
     }
-
     return 0;
 }
 
 int disk_block_read(int block, void *buf)
 {
-    sem_down(&disk.sem);
-
-    request_t *req = request('R', buf, block);
+    request_t *req = malloc(sizeof(request_t));
     if (!req)
-        return -1;
+        return 0;
+    req->req = current_task;
+    req->operation = READ;
+    req->buffer = buf;
+    req->block = block;
+    req->next = req->prev = NULL;
+    sem_down(&disk.semaphore);
     queue_append((queue_t **)&disk.req_queue, (queue_t *)req);
-    if (mngDiskTask.status == TASK_SUSPENDED)
+    if (disk_manager.status == TASK_SUSPENDED)
     {
-        mngDiskTask.status = TASK_READY;
-        queue_append((queue_t **)&ready_tasks, (queue_t *)&mngDiskTask);
+        disk_manager.status = TASK_READY;
+        queue_append((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
     }
-
-    sem_up(&disk.sem);
-    current_task->status = TASK_SUSPENDED;
-    queue_remove((queue_t **)&ready_tasks, (queue_t *)current_task);
-    queue_append((queue_t **)&disk.queue, (queue_t *)current_task);
-
+    sem_up(&disk.semaphore);
+    task_suspend(&disk.queue);
     task_yield();
     return 0;
 }
 
 int disk_block_write(int block, void *buf)
 {
-    sem_down(&disk.sem);
-
-    request_t *newRequest = request('W', buf, block);
-    if (!newRequest)
-        return -1;
-    queue_append((queue_t **)&disk.req_queue, (queue_t *)newRequest);
-    if (mngDiskTask.status == TASK_SUSPENDED)
+    request_t *req = malloc(sizeof(request_t));
+    if (!req)
+        return 0;
+    req->req = current_task;
+    req->operation = WRITE;
+    req->buffer = buf;
+    req->block = block;
+    req->next = req->prev = NULL;
+    sem_down(&disk.semaphore);
+    queue_append((queue_t **)&disk.req_queue, (queue_t *)req);
+    if (disk_manager.status == TASK_SUSPENDED)
     {
-        mngDiskTask.status = TASK_READY;
-        queue_append((queue_t **)&ready_tasks, (queue_t *)&mngDiskTask);
+        disk_manager.status = TASK_READY;
+        queue_append((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
     }
-
-    sem_up(&disk.sem);
-    current_task->status = TASK_SUSPENDED;
-    queue_remove((queue_t **)&ready_tasks, (queue_t *)current_task);
-    queue_append((queue_t **)&disk.queue, (queue_t *)current_task);
-
+    sem_up(&disk.semaphore);
+    task_suspend(&disk.queue);
     task_yield();
     return 0;
 }

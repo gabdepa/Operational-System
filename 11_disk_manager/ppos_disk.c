@@ -1,6 +1,6 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <stdio.h>
 #include "ppos.h"
 #include "ppos_data.h"
 #include "ppos_disk.h"
@@ -72,17 +72,20 @@ int disk_mgr_init(int *numBlocks, int *blockSize)
 {
     if (disk_cmd(DISK_CMD_INIT, 0, 0))
     {
-        return -1;
+        perror("ERROR: disk_mgr_init()=> Could not initialize disk!\n");
+        exit(1);
     }
     *numBlocks = disk_cmd(DISK_CMD_DISKSIZE, 0, 0);
     if (*numBlocks < 0)
     {
-        return -1;
+        perror("ERROR: disk_mgr_init()=> Could not set number of blocks!\n");
+        exit(1);
     }
     *blockSize = disk_cmd(DISK_CMD_BLOCKSIZE, 0, 0);
     if (*blockSize < 0)
     {
-        return -1;
+        perror("ERROR: disk_mgr_init()=> Could not set size of the blocks!\n");
+        exit(1);
     }
     disk_signal = FALSE;
     sem_init(&disk.semaphore, 1);

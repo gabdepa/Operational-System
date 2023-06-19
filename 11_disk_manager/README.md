@@ -44,7 +44,7 @@ The management of disk input/output operations consists on the implementation of
  - A queue of disk access requests; each request indicates the requesting task, the type of request (reading or writing), the desired block, and the address of the data buffer;
  - The disk access functions offered to tasks (**`disk_mgr_init`**, **`disk_block_read`** and **`disk_block_write`**).
 
-The implementation of the disk manager is in the **`ppos_disk.c`** file, while its interface is in the ppos_disk.h file. The following figure shows the general structure of the code:
+The implementation of the disk manager is in the **`ppos_disk.c`** file, while its interface is in the **`ppos_disk.h`** file. The following figure shows the general structure of the code:
 
 ![Schema](https://wiki.inf.ufpr.br/maziero/lib/exe/fetch.php?cache=&media=so:ppos_disk.png)
 

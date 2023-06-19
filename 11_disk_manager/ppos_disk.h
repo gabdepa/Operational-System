@@ -17,23 +17,23 @@ typedef enum
 {
 	READ,
 	WRITE
-} requestStatusT;
+} operations;
 
-typedef struct request_t
+typedef struct request_type
 {
-	struct request_t *next, *prev;
-	task_t *req;
-	requestStatusT operation;
+	struct request_type *next, *prev;
+	task_t *task;
+	operations operation;
 	int block;
 	void *buffer;
-} request_t;
+} request_type;
 
 // estrutura que representa um disco no sistema operacional
 
 typedef struct
 {
-	request_t *request;
-	request_t *req_queue;
+	request_type *request;
+	request_type *requests;
 	task_t *queue;
 	semaphore_t semaphore;
 } disk_t;

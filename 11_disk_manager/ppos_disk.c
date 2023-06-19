@@ -9,7 +9,7 @@
 
 extern task_t *current_task;
 extern task_t *ready_tasks;
-int signal_disk;
+int disk_signal;
 struct sigaction action2;
 disk_t disk;
 task_t disk_manager;
@@ -19,18 +19,17 @@ void diskDriverBody()
     while (TRUE)
     {
         sem_down(&disk.semaphore);
-        if (signal_disk)
+        if (disk_signal)
         {
             task_t *task = disk.request->task;
             task->status = TASK_READY;
             task_resume(task, &disk.queue);
             queue_remove((queue_t **)&disk.requests, (queue_t *)disk.request);
-
-            signal_disk = FALSE;
+            disk_signal = FALSE;
             free(disk.request);
         }
-        int status_disk = disk_cmd(DISK_CMD_STATUS, 0, 0);
-        if ((status_disk == DISK_STATUS_IDLE) && (disk.requests))
+        int disk_status = disk_cmd(DISK_CMD_STATUS, 0, 0);
+        if ((disk_status == DISK_STATUS_IDLE) && (disk.requests))
         {
             disk.request = disk.requests;
             if (disk.request->operation == WRITE)
@@ -56,11 +55,16 @@ void diskDriverBody()
 
 void handle_signal()
 {
-    signal_disk = TRUE;
+    disk_signal = TRUE;
     if (disk_manager.status == TASK_SUSPENDED)
     {
         disk_manager.status = TASK_READY;
         queue_append((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
+        return;
+    }
+    else
+    {
+        return;
     }
 }
 
@@ -80,7 +84,7 @@ int disk_mgr_init(int *numBlocks, int *blockSize)
     {
         return -1;
     }
-    signal_disk = FALSE;
+    disk_signal = FALSE;
     sem_init(&disk.semaphore, 1);
     task_init(&disk_manager, diskDriverBody, NULL);
     disk_manager.status = TASK_SUSPENDED;

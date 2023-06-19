@@ -1,6 +1,6 @@
 # Disk Manager
 
-This project aimed to implement **input/output operations** (reading and writing) of data blocks on a virtual hard drive. The execution of these operations will be handled by a disk manager, which serves as the disk access driver. On section **Task** there is a image showing the structure of the project
+This project aimed to implement **input/output operations** (reading and writing) of data blocks on a virtual hard drive. The execution of these operations will be handled by a disk manager, which serves as the disk access driver. On section **Task** there is a image showing the structure of the project.
 
 ## Disk Access Interface
 

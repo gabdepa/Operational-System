@@ -71,7 +71,7 @@ void diskDriverBody (void * args)
       // if it was awakened due to a signal from the disk
       if (disk generated a signal)
       {
-         // wake up the task whose request was answered
+         // wake up the task whose request was answered, the Head of the queue(FCFS)
       }
  
       // if the disk is free and there are I/O requests in the queue

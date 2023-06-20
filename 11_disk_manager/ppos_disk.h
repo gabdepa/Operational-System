@@ -9,35 +9,31 @@ typedef enum
 	WRITE
 } operations;
 
-typedef struct request_type
+typedef struct request_t
 {
-	struct request_type *next, *prev;
-	task_t *task;
-	operations operation;
-	int block;
-	void *buffer;
-} request_type;
-
-// estrutura que representa um disco no sistema operacional
+	struct request_t *next, *prev; // works as a circular queue
+	task_t *task;				   // Task: The task that requested the operation
+	operations operation;		   // Operation: Which operation was requested(READ or WRITE)
+	int block;					   // Block: In which block it is the data that should be modified(WRITE) or retrieved(READ)
+	void *buffer;				   // Buffer: The buffer to put the data retrieved(READ) or modified(WRITE)
+} request_t;
 
 typedef struct
 {
-	request_type *request;
-	request_type *requests;
-	task_t *queue;
-	semaphore_t semaphore;
+	request_t *requests;   // Queue of requests: Here is stored the requests operations to the disk
+	task_t *queue;		   // Queue of the disk: Here is stored the tasks that requested a operation from disk
+	semaphore_t semaphore; // Semaphore of the disk: It is used to prevent racing condition on request operations to the disk
 } disk_t;
 
-// inicializacao do gerente de disco
-// retorna -1 em erro ou 0 em sucesso
+// Disk initialization, return -1 in case of error, or 0 in case of success
 // numBlocks: tamanho do disco, em blocos
 // blockSize: tamanho de cada bloco do disco, em bytes
 int disk_mgr_init(int *numBlocks, int *blockSize);
 
-// leitura de um bloco, do disco para o buffer
+// Read of a block "block", from the disk to the buffer "buffer"
 int disk_block_read(int block, void *buffer);
 
-// escrita de um bloco, do buffer para o disco
+// Writting of a block "block", from the buffer "buffer" to the disk
 int disk_block_write(int block, void *buffer);
 
 #endif

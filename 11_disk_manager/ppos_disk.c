@@ -163,26 +163,26 @@ int disk_block_read(int block, void *buffer)
         // Exit with error code
         exit(1);
     }
+    // Set next and previous pointers as NULL
+    request->next = request->prev = NULL;
     // Set task attribute to be the current task
     request->task = current_task;
     // Set the operation as READ
     request->operation = READ;
-    // Set the buffer
-    request->buffer = buffer;
     // Set the block
     request->block = block;
-    // Set next and previous pointers as NULL
-    request->next = request->prev = NULL;
+    // Set the buffer
+    request->buffer = buffer;
     // Decrease the semaphore count (lock)
     sem_down(&disk.semaphore);
     // Add the request to the queue of requests
     queue_append((queue_t **)&disk.requests, (queue_t *)request);
-    // If disk manager task is suspended
+    // If disk manager task is SUSPENDED
     if (disk_manager.status == TASK_SUSPENDED)
     {
-        // Set disk manager task as ready
+        // Set disk manager task as READY
         disk_manager.status = TASK_READY;
-        // Add disk manager task to the queue of ready
+        // Add disk manager task to the queue of ready tasks
         queue_append((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
     }
     // Increase the semaphore count (unlock)
@@ -207,26 +207,26 @@ int disk_block_write(int block, void *buffer)
         // Exit with error code
         exit(1);
     }
+    // Set next and previous pointers as NULL
+    request->next = request->prev = NULL;
     // Set task attribute to be the current task
     request->task = current_task;
     // Set the operation as WRITE
     request->operation = WRITE;
-    // Set the buffer
-    request->buffer = buffer;
     // Set the block
     request->block = block;
-    // Set next and previous pointers as NULL
-    request->next = request->prev = NULL;
+    // Set the buffer
+    request->buffer = buffer;
     // Decrease the semaphore count (lock)
     sem_down(&disk.semaphore);
     // Add the request to the queue of requests
     queue_append((queue_t **)&disk.requests, (queue_t *)request);
-    // If disk manager task is suspended
+    // If disk manager task is SUSPENDED
     if (disk_manager.status == TASK_SUSPENDED)
     {
-        // Set disk manager task as ready
+        // Set disk manager task as READY
         disk_manager.status = TASK_READY;
-        // Add disk manager task to the queue of ready
+        // Add disk manager task to the queue of ready tasks
         queue_append((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
     }
     // Increase the semaphore count (unlock)

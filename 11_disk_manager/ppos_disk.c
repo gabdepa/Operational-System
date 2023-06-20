@@ -40,19 +40,19 @@ void diskDriverBody()
         // If disk status of the disk is idle and there are requests to be processed
         if ((disk_cmd(DISK_CMD_STATUS, 0, 0) == DISK_STATUS_IDLE) && (disk.requests))
         {
-            // If operation for the head of the  queue of requests is write
+            // If operation for the head of the queue of requests is WRITE
             if (disk.requests->operation == WRITE)
             {
                 // Write to disk
                 disk_cmd(DISK_CMD_WRITE, disk.requests->block, disk.requests->buffer);
             }
-            // If operation for the head of the  queue of requests
+            // If operation for the head of the queue of requests is READ
             else if (disk.requests->operation == READ)
             {
                 // Read from disk
                 disk_cmd(DISK_CMD_READ, disk.requests->block, disk.requests->buffer);
             }
-            else // If operation for the head of the  queue of requests is neither read nor write
+            else // If operation for the head of the  queue of requests is neither READ nor WRITE
             {
                 // Print an error message
                 perror("ERROR: diskDriverBody()=> Unknown request!\n");

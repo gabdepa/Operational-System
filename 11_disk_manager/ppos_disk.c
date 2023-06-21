@@ -79,10 +79,10 @@ void handle_signal()
     // If disk manager task is suspended
     if (disk_manager.status == TASK_SUSPENDED)
     {
-        // Add disk manager task to ready tasks queue
-        queue_append((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
         // Set disk manager task status as READY
         disk_manager.status = TASK_READY;
+        // Add disk manager task to ready tasks queue
+        queue_append((queue_t **)&ready_tasks, (queue_t *)&disk_manager);
         return;
     }
     else
